@@ -1,0 +1,23 @@
+# Unity生成的文件
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+
+# Rider 和 VS Code 特定文件
+.idea/
+.vscode/
+*.sln
+*.csproj
+*.userprefs
+
+# 其他不必要的文件
+*.pidb
+*.suo
+*.user
+*.userprefs
+*.unityproj
+*.booproj
+*.svd
