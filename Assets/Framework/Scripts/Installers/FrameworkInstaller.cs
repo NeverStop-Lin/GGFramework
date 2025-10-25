@@ -1,7 +1,9 @@
 using System;
 using Framework.Core;
+using Framework.Core.Resource;
 using Framework.Modules.Advertise;
 using Framework.Modules.Analytics;
+using Framework.Modules.Pool;
 using Framework.Modules.Sound;
 using Framework.Modules.UI;
 using Framework.Modules.User;
@@ -30,13 +32,15 @@ namespace Framework.Scripts
             Container.Bind<IUI>().To<UICenter>().AsSingle();
             Container.Bind<IObservers>().To<ObserversCenter>().AsSingle();
             Container.Bind<IConfigs>().To<ConfigCenter>().AsSingle();
+            Container.Bind<IResource>().To<ResourceCenter>().AsSingle();
 
-
+            // 绑定通用模块
             Container.Bind<SoundModule>().To<SoundModule>().AsSingle();
             Container.Bind<AnalyticsModule>().To<AnalyticsModule>().AsSingle();
             Container.Bind<AdvertiseModule>().To<AdvertiseModule>().AsSingle();
             Container.Bind<UserModule>().To<UserModule>().AsSingle();
             Container.Bind<CommonUIModule>().To<CommonUIModule>().AsSingle();
+            Container.Bind<PoolModule>().To<PoolModule>().AsSingle();
 
             // 绑定工厂
             Container.BindFactory<Type, IBaseUI, PlaceholderFactory<Type, IBaseUI>>()

@@ -1,6 +1,7 @@
 using Framework.Core;
 using Framework.Modules.Advertise;
 using Framework.Modules.Analytics;
+using Framework.Modules.Pool;
 using Framework.Modules.Sound;
 using Framework.Modules.UI;
 using Framework.Modules.User;
@@ -37,7 +38,8 @@ namespace Framework.Scripts
         /// <summary>存储系统</summary>
         public static IStorage Storage => Instance?._storage;
 
-
+        /// <summary>资源管理系统</summary>
+        public static IResource Resource => Instance?._resource;
 
 
         // ========== 依赖注入 ==========
@@ -48,6 +50,7 @@ namespace Framework.Scripts
         [Inject] private TimerCenter _timer;
         [Inject] private IObservers _observers;
         [Inject] private IConfigs _config;
+        [Inject] private IResource _resource;
 
 
 
@@ -68,12 +71,16 @@ namespace Framework.Scripts
         /// <summary>通用UI组件模块</summary>
         public static CommonUIModule CommonUI => Instance?._commonUI;
 
+        /// <summary>对象池模块</summary>
+        public static PoolModule Pool => Instance?._pool;
+
         // ========== 依赖注入 ==========
         [Inject] private SoundModule _sound;
         [Inject] private AnalyticsModule _analytics;
         [Inject] private AdvertiseModule _advertise;
         [Inject] private UserModule _user;
         [Inject] private CommonUIModule _commonUI;
+        [Inject] private PoolModule _pool;
 
 
         void Awake()

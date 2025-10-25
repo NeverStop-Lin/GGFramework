@@ -61,6 +61,11 @@ GridFramework.Timer.AddTimer("countdown", 1f, () => {
 // Storage 系统
 GridFramework.Storage.Save("key", value);
 var data = GridFramework.Storage.Load<int>("key");
+
+// Resource 系统（零开销自动检测）⭐
+var prefab = await GridFramework.Resource.LoadAsync<GameObject>("UI/MainMenu");
+// 通过清单查询（0ms），自动选择 Resources 或 Addressables
+GridFramework.Resource.Release("UI/MainMenu");
 ```
 
 ### 使用通用模块
@@ -81,14 +86,20 @@ bool success = await GridModules.Advertise.Video.Show("double_reward");
 
 // 通用UI
 GridModules.CommonUI.ShowToast("提示信息");
+
+// 对象池
+var pool = GridFramework.Pool.CreateGameObjectPool(prefab, minSize: 10);
+var obj = pool.Spawn();
+pool.Despawn(obj);
 ```
 
 ## ✨ 核心特性
 
 ### Core 层（核心框架）
 
-- **6 大核心系统**：UI、Observer、Config、Timer、Storage、Event
-- **完整的接口设计**：IUI、IObservers、IConfigs、ITimer、IStorage
+- **7 大核心系统**：UI、Observer、Config、Timer、Storage、Event、Resource
+- **完整的接口设计**：IUI、IObservers、IConfigs、ITimer、IStorage、IResource
+- **智能资源管理**：清单零开销检测（0ms），自动选择加载方式，缓存管理
 - **丰富的工具类**：Pipeline、Extensions、BaseType 等
 - **依赖注入支持**：基于 Zenject 的完整 DI 框架
 
@@ -99,6 +110,7 @@ GridModules.CommonUI.ShowToast("提示信息");
 - **Advertise**：广告集成（视频广告）
 - **User**：用户管理（可扩展）
 - **UI**：通用UI组件（Toast、Loading等）
+- **Pool**：对象池管理（GameObject池和普通对象池）
 
 ## 🏗️ 架构设计
 
@@ -138,9 +150,14 @@ Scripts/                    [统一入口点]
 
 ## 📚 文档
 
-- [Core 层文档](Core/README.md)
-- [Modules 层文档](Modules/README.md)
-- [开发扩展编码规范](开发扩展编码规范.md)
+**使用文档**：
+- [资源存放规范](Doc/资源存放规范.md) - 目录结构和命名规范
+- [资源系统使用说明](Doc/资源系统使用说明.md) - API 使用方法 ⭐
+- [资源清单系统使用指南](Doc/资源清单系统使用指南.md) - 清单工具使用
+- [开发扩展编码规范](Doc/开发扩展编码规范.md) - 代码编写规范
+
+**技术文档**：
+- [资源系统技术实现](Doc/资源系统技术实现.md) - 设计原理和实现细节 📚
 
 ## 🎯 适用场景
 
@@ -156,6 +173,9 @@ Scripts/                    [统一入口点]
 - ✅ 迁移到 UGUI
 - ✅ 完善模块化设计
 - ✅ 优化命名空间（缩短 38%）
+- ✅ 新增资源管理系统（Resource）
+- ✅ 新增对象池系统（Pool）
+- ✅ 完善资源存放规范文档
 
 ### v1.0.0
 - 基于 FairyGUI 的原始版本
