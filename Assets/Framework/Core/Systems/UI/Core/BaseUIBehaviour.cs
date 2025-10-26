@@ -76,12 +76,12 @@ namespace Framework.Core
         #region IBaseUI接口实现
         
         /// <summary>
-        /// 初始化UI（保持与旧版兼容）
+        /// 初始化UI
         /// </summary>
         public void Initialize()
         {
             // MonoBehaviour版本中，大部分初始化在Awake中完成
-            // 这里保留是为了兼容旧的调用方式
+            // UICenter调用此方法时，确保Pipeline已初始化
             if (_uiPipelines.Count == 0)
             {
                 InitializePipeline();

@@ -29,7 +29,7 @@ namespace Framework.Core
                 return CreateFromPrefab(uiType, config.ResourcePath);
             }
             
-            // 方式2: 动态创建（兼容模式，用于没有Prefab的UI）
+            // 方式2: 动态创建（用于没有Prefab的UI）
             return CreateDynamic(uiType);
         }
         

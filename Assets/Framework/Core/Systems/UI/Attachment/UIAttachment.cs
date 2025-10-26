@@ -9,20 +9,11 @@ namespace Framework.Core
         PipelineContext _curContext;
 
         /// <summary>
-        /// 获取目标UI（支持BaseUI和BaseUIBehaviour）
+        /// 获取目标UI
         /// </summary>
         protected IBaseUI Target
         {
             get { return (IBaseUI)_curContext.Data["target"]; }
-        }
-        
-        /// <summary>
-        /// 获取目标UI作为BaseUI（兼容旧代码）
-        /// </summary>
-        [Obsolete("请使用 Target 属性（返回IBaseUI），此属性将在未来版本移除")]
-        protected BaseUI TargetBaseUI
-        {
-            get { return _curContext.Data["target"] as BaseUI; }
         }
 
         /// <summary>
