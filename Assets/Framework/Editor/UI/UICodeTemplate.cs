@@ -55,7 +55,7 @@ namespace Framework.Editor.UI
             sb.AppendLine("    /// <summary>");
             sb.AppendLine($"    /// {uiName} - 自动生成的组件绑定");
             sb.AppendLine("    /// </summary>");
-            sb.AppendLine($"    public partial class {uiName} : UGUIBaseUIBehaviour");
+            sb.AppendLine($"    public partial class {uiName} : UIBehaviour");
             sb.AppendLine("    {");
             
             // 字段声明

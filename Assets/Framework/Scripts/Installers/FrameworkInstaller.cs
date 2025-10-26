@@ -45,7 +45,7 @@ namespace Framework.Scripts
             // 绑定工厂
             // 使用新的MonoBehaviour工厂（UI类已迁移到MonoBehaviour）
             Container.BindFactory<Type, IBaseUI, PlaceholderFactory<Type, IBaseUI>>()
-                .FromFactory<UIFactoryBehaviour>();
+                .FromFactory<UIFactory>();
 
             Container.BindFactory<Type, Observer, PlaceholderFactory<Type, Observer>>()
                 .FromFactory<ObserverFactory>();

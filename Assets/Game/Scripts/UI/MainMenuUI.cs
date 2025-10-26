@@ -59,9 +59,8 @@ namespace Game.UI
         /// </summary>
         private void OnStartClick()
         {
-            // TODO: 实现点击逻辑
             GridFramework.UI.Show<GameUI>();
-            Hide();
+            _ = Hide();
         }
         
         /// <summary>

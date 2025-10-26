@@ -125,7 +125,7 @@ namespace Framework.Core
             try
             {
                 // 禁用UI的Raycast，防止点击穿透
-                if (ui is UGUIBaseUIBehaviour ugui && ugui != null)
+                if (ui is UIBehaviour ugui && ugui != null)
                 {
                     // TODO: 实现禁用Raycast的逻辑
                     FrameworkLogger.Info($"[UIStack] 禁用Raycast: {ui.GetType().Name}");
@@ -144,7 +144,7 @@ namespace Framework.Core
         {
             try
             {
-                if (ui is UGUIBaseUIBehaviour ugui && ugui != null)
+                if (ui is UIBehaviour ugui && ugui != null)
                 {
                     // TODO: 实现启用Raycast的逻辑
                     FrameworkLogger.Info($"[UIStack] 启用Raycast: {ui.GetType().Name}");

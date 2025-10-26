@@ -6,14 +6,14 @@ using Zenject;
 namespace Framework.Core
 {
     /// <summary>
-    /// MonoBehaviour版本的UI工厂
+    /// UI工厂
     /// 负责创建MonoBehaviour UI实例
     /// </summary>
-    public class UIFactoryBehaviour : IFactory<Type, IBaseUI>
+    public class UIFactory : IFactory<Type, IBaseUI>
     {
         private readonly DiContainer _container;
         
-        public UIFactoryBehaviour(DiContainer container)
+        public UIFactory(DiContainer container)
         {
             _container = container;
         }
