@@ -38,7 +38,7 @@ namespace Framework.Core
         /// <summary>
         /// 显示UI
         /// </summary>
-        public UiLifeCycle<T> Show<T>(params object[] args) where T : IBaseUI, new()
+        public UiLifeCycle<T> Show<T>(params object[] args) where T : IBaseUI
         {
             var uiKey = typeof(T);
             FrameworkLogger.Info($"[UICenter] 请求显示UI: {uiKey.Name}");
@@ -356,7 +356,7 @@ namespace Framework.Core
         /// <summary>
         /// 推入UI栈（显示UI）
         /// </summary>
-        public UiLifeCycle<T> PushUI<T>(params object[] args) where T : IBaseUI, new()
+        public UiLifeCycle<T> PushUI<T>(params object[] args) where T : IBaseUI
         {
             var lifecycle = Show<T>(args);
             
@@ -431,7 +431,7 @@ namespace Framework.Core
         /// <summary>
         /// 预加载UI
         /// </summary>
-        public async Task PreloadUI<T>() where T : IBaseUI, new()
+        public async Task PreloadUI<T>() where T : IBaseUI
         {
             var uiType = typeof(T);
             FrameworkLogger.Info($"[UICenter] 预加载UI: {uiType.Name}");

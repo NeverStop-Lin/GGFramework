@@ -17,7 +17,7 @@ namespace Framework.Core
         /// <summary>
         /// 显示UI
         /// </summary>
-        UiLifeCycle<T> Show<T>(params object[] args) where T : IBaseUI, new();
+        UiLifeCycle<T> Show<T>(params object[] args) where T : IBaseUI;
         
         /// <summary>
         /// 隐藏UI
@@ -65,7 +65,7 @@ namespace Framework.Core
         /// <summary>
         /// 推入UI栈（显示UI）
         /// </summary>
-        UiLifeCycle<T> PushUI<T>(params object[] args) where T : IBaseUI, new();
+        UiLifeCycle<T> PushUI<T>(params object[] args) where T : IBaseUI;
         
         /// <summary>
         /// 弹出栈顶UI（返回功能）
@@ -98,7 +98,7 @@ namespace Framework.Core
         /// <summary>
         /// 预加载UI
         /// </summary>
-        Task PreloadUI<T>() where T : IBaseUI, new();
+        Task PreloadUI<T>() where T : IBaseUI;
         
         #endregion
         
