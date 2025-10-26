@@ -8,9 +8,12 @@ namespace Framework.Core
 
         PipelineContext _curContext;
 
-        protected BaseUI Target
+        /// <summary>
+        /// 获取目标UI
+        /// </summary>
+        protected IBaseUI Target
         {
-            get { return (BaseUI)_curContext.Data["target"]; }
+            get { return (IBaseUI)_curContext.Data["target"]; }
         }
 
         /// <summary>

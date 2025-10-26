@@ -38,7 +38,7 @@ namespace Framework.Core
         /// <summary>
         /// 显示UI
         /// </summary>
-        public UiLifeCycle<T> Show<T>(params object[] args) where T : IBaseUI, new()
+        public UiLifeCycle<T> Show<T>(params object[] args) where T : IBaseUI
         {
             var uiKey = typeof(T);
             FrameworkLogger.Info($"[UICenter] 请求显示UI: {uiKey.Name}");
@@ -161,7 +161,7 @@ namespace Framework.Core
                 uiState.ShowTcs?.TrySetResult(result);
                 
                 // 分配层级
-                if (ui is UGUIBaseUI ugui)
+                if (ui is UIBehaviour ugui)
                 {
                     var config = UIManifestManager.GetConfig(uiType);
                     var layerType = config?.UIType ?? UIType.Main;
@@ -356,7 +356,7 @@ namespace Framework.Core
         /// <summary>
         /// 推入UI栈（显示UI）
         /// </summary>
-        public UiLifeCycle<T> PushUI<T>(params object[] args) where T : IBaseUI, new()
+        public UiLifeCycle<T> PushUI<T>(params object[] args) where T : IBaseUI
         {
             var lifecycle = Show<T>(args);
             
@@ -431,7 +431,7 @@ namespace Framework.Core
         /// <summary>
         /// 预加载UI
         /// </summary>
-        public async Task PreloadUI<T>() where T : IBaseUI, new()
+        public async Task PreloadUI<T>() where T : IBaseUI
         {
             var uiType = typeof(T);
             FrameworkLogger.Info($"[UICenter] 预加载UI: {uiType.Name}");
@@ -480,7 +480,7 @@ namespace Framework.Core
         public void SetUILayer<T>(int layer) where T : IBaseUI
         {
             var ui = GetUI<T>();
-            if (ui is UGUIBaseUI ugui)
+            if (ui is UIBehaviour ugui)
             {
                 ugui.SetIndex(layer);
                 FrameworkLogger.Info($"[UICenter] 设置UI层级: {typeof(T).Name} -> {layer}");
@@ -493,7 +493,7 @@ namespace Framework.Core
         public void BringToFront<T>() where T : IBaseUI
         {
             var ui = GetUI<T>();
-            if (ui is UGUIBaseUI ugui)
+            if (ui is UIBehaviour ugui)
             {
                 var maxLayer = 999;
                 ugui.SetIndex(maxLayer);

@@ -6,7 +6,7 @@ namespace Framework.Core
 {
     public class SortUIAttachment : UIAttachment
     {
-        static List<BaseUI> _uis = new List<BaseUI>();
+        static List<IBaseUI> _uis = new List<IBaseUI>();
 
         readonly Dictionary<UIType, int> _typeMap = new Dictionary<UIType, int>
         {

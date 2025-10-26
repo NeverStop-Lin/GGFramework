@@ -124,9 +124,8 @@ namespace Framework.Core
         {
             try
             {
-                // 通过反射或其他方式禁用Raycast
-                // 这里简化处理，实际应该获取UI的Canvas或CanvasGroup
-                if (ui is UGUIBaseUI ugui && ugui != null)
+                // 禁用UI的Raycast，防止点击穿透
+                if (ui is UIBehaviour ugui && ugui != null)
                 {
                     // TODO: 实现禁用Raycast的逻辑
                     FrameworkLogger.Info($"[UIStack] 禁用Raycast: {ui.GetType().Name}");
@@ -145,7 +144,7 @@ namespace Framework.Core
         {
             try
             {
-                if (ui is UGUIBaseUI ugui && ugui != null)
+                if (ui is UIBehaviour ugui && ugui != null)
                 {
                     // TODO: 实现启用Raycast的逻辑
                     FrameworkLogger.Info($"[UIStack] 启用Raycast: {ui.GetType().Name}");

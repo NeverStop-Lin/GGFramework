@@ -55,7 +55,7 @@ namespace Framework.Editor.UI
             sb.AppendLine("    /// <summary>");
             sb.AppendLine($"    /// {uiName} - 自动生成的组件绑定");
             sb.AppendLine("    /// </summary>");
-            sb.AppendLine($"    public partial class {uiName} : UGUIBaseUI");
+            sb.AppendLine($"    public partial class {uiName} : UIBehaviour");
             sb.AppendLine("    {");
             
             // 字段声明
@@ -84,16 +84,20 @@ namespace Framework.Editor.UI
             sb.AppendLine("        {");
             sb.AppendLine("            base.BindComponents();");
             sb.AppendLine("            ");
+            sb.AppendLine("            // 注意：路径是相对于当前GameObject的，不包含根节点名称");
             
             foreach (var comp in components)
             {
+                // 移除路径中的根节点名称（第一个'/'之前的部分）
+                var relativePath = RemoveRootNodeFromPath(comp.Path);
+                
                 if (comp.ComponentTypeName == "GameObject")
                 {
-                    sb.AppendLine($"            {comp.FieldName} = UIObject.transform.Find(\"{comp.Path}\").gameObject;");
+                    sb.AppendLine($"            {comp.FieldName} = transform.Find(\"{relativePath}\").gameObject;");
                 }
                 else
                 {
-                    sb.AppendLine($"            {comp.FieldName} = FindComponent<{comp.ComponentTypeName}>(\"{comp.Path}\");");
+                    sb.AppendLine($"            {comp.FieldName} = FindComponent<{comp.ComponentTypeName}>(\"{relativePath}\");");
                 }
             }
             
@@ -132,10 +136,12 @@ namespace Framework.Editor.UI
                 sb.AppendLine("        /// </summary>");
                 sb.AppendLine("        protected override void UnregisterEvents()");
                 sb.AppendLine("        {");
+                sb.AppendLine("            // 添加空检查，防止组件未找到时出错");
                 
                 foreach (var btn in buttons)
                 {
-                    sb.AppendLine($"            {btn.FieldName}.onClick.RemoveListener({btn.EventHandlerName});");
+                    sb.AppendLine($"            if ({btn.FieldName} != null)");
+                    sb.AppendLine($"                {btn.FieldName}.onClick.RemoveListener({btn.EventHandlerName});");
                 }
                 
                 sb.AppendLine("            ");
@@ -253,6 +259,26 @@ namespace Framework.Editor.UI
             sb.AppendLine("}");
             
             return sb.ToString();
+        }
+        
+        /// <summary>
+        /// 从路径中移除根节点名称
+        /// 例如：MainMenuUI/Panel/@Button_Start -> Panel/@Button_Start
+        /// </summary>
+        private static string RemoveRootNodeFromPath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return path;
+            
+            var firstSlashIndex = path.IndexOf('/');
+            if (firstSlashIndex > 0 && firstSlashIndex < path.Length - 1)
+            {
+                // 移除第一个'/'之前的部分（根节点名称）
+                return path.Substring(firstSlashIndex + 1);
+            }
+            
+            // 如果没有'/'，返回空字符串（表示是根节点）
+            return "";
         }
     }
 }
