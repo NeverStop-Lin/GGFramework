@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Framework.Scripts;
+using Game.UI;
 using UnityEngine;
 namespace Framework.Scripts
 {
@@ -9,7 +10,7 @@ namespace Framework.Scripts
         // Start is called before the first frame update
         void Start()
         {
-         
+            GridFramework.UI.Show<MainMenuUI>();
         }
 
         // Update is called once per frame
