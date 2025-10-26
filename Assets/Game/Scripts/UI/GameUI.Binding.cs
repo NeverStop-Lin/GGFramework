@@ -15,7 +15,7 @@ namespace Game.UI
     /// <summary>
     /// GameUI - 自动生成的组件绑定
     /// </summary>
-    public partial class GameUI : UGUIBaseUI
+    public partial class GameUI : UGUIBaseUIBehaviour
     {
         #region Auto-Generated Fields
         

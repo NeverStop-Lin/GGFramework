@@ -43,10 +43,9 @@ namespace Framework.Scripts
             Container.Bind<PoolModule>().To<PoolModule>().AsSingle();
 
             // 绑定工厂
-            // 暂时保持旧工厂，因为现有UI类（MainMenuUI, GameUI）还未迁移
-            // 等迁移完成后再切换到UIFactoryBehaviour
+            // 使用新的MonoBehaviour工厂（UI类已迁移到MonoBehaviour）
             Container.BindFactory<Type, IBaseUI, PlaceholderFactory<Type, IBaseUI>>()
-                .FromFactory<UIFactory>();
+                .FromFactory<UIFactoryBehaviour>();
 
             Container.BindFactory<Type, Observer, PlaceholderFactory<Type, Observer>>()
                 .FromFactory<ObserverFactory>();
