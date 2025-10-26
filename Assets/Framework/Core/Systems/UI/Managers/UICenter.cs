@@ -480,7 +480,7 @@ namespace Framework.Core
         public void SetUILayer<T>(int layer) where T : IBaseUI
         {
             var ui = GetUI<T>();
-            if (ui is BaseUIBehaviour ugui)
+            if (ui is UIBehaviour ugui)
             {
                 ugui.SetIndex(layer);
                 FrameworkLogger.Info($"[UICenter] 设置UI层级: {typeof(T).Name} -> {layer}");
@@ -493,7 +493,7 @@ namespace Framework.Core
         public void BringToFront<T>() where T : IBaseUI
         {
             var ui = GetUI<T>();
-            if (ui is BaseUIBehaviour ugui)
+            if (ui is UIBehaviour ugui)
             {
                 var maxLayer = 999;
                 ugui.SetIndex(maxLayer);
