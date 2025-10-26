@@ -11,7 +11,7 @@ namespace Framework.Core
     /// UI基类（MonoBehaviour + UGUI）
     /// 提供Pipeline管道、生命周期管理、Attachment机制、UGUI组件绑定
     /// </summary>
-    public abstract class UIBehaviour : MonoBehaviour, IBaseUI
+    public abstract class BaseUIBehaviour : MonoBehaviour, IBaseUI
     {
         #region 依赖注入
         
@@ -110,8 +110,9 @@ namespace Framework.Core
         /// <summary>
         /// Unity OnDestroy钩子（GameObject销毁时）
         /// 自动触发Destroy Pipeline
+        /// 使用new关键字明确隐藏MonoBehaviour.OnDestroy
         /// </summary>
-        protected virtual void OnDestroy()
+        protected virtual new void OnDestroy()
         {
             // 如果是通过DoDestroy销毁的，不要重复执行
             if (uiState == UIState.Destroy)
@@ -416,10 +417,9 @@ namespace Framework.Core
         }
         
         /// <summary>
-        /// UI移除时调用（Pipeline回调）
-        /// 子类可以重写此方法来清理资源和执行业务逻辑
+        /// UI销毁时调用（Pipeline回调）
         /// </summary>
-        protected virtual void OnRemove(params object[] args)
+        protected virtual void OnDestroy(params object[] args)
         {
             // 清理资源
             Canvas = null;
@@ -531,14 +531,14 @@ namespace Framework.Core
         #region Attachment适配器
         
         /// <summary>
-        /// 将UIBehaviour适配为UIAttachment
+        /// 将BaseUIBehaviour适配为UIAttachment
         /// 用于将子类的OnCreate/OnShow等方法注入Pipeline
         /// </summary>
         private class SelfAttachmentAdapter : UIAttachment
         {
-            private readonly UIBehaviour _ui;
+            private readonly BaseUIBehaviour _ui;
             
-            public SelfAttachmentAdapter(UIBehaviour ui)
+            public SelfAttachmentAdapter(BaseUIBehaviour ui)
             {
                 _ui = ui;
             }
@@ -574,7 +574,7 @@ namespace Framework.Core
             protected override Task OnBeforeDestroy(PipelineContext context)
             {
                 _ui.uiState = UIState.Destroy;
-                _ui.OnRemove(GetParameters(context));
+                _ui.OnDestroy(GetParameters(context));
                 return Task.CompletedTask;
             }
             
