@@ -197,7 +197,6 @@ namespace Framework.Editor.UI
             sb.AppendLine("            {");
             sb.AppendLine($"                ResourcePath = \"{resourcePath}\",");
             sb.AppendLine("                UIType = UIType.Main,");
-            sb.AppendLine("                AlignType = UIAlignType.Center,");
             sb.AppendLine("                CacheStrategy = UICacheStrategy.AlwaysCache");
             sb.AppendLine("            };");
             sb.AppendLine("        }");

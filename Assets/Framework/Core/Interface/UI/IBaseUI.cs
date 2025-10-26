@@ -10,11 +10,6 @@ namespace Framework.Core
         UIType UIType { get; set; }
         
         /// <summary>
-        /// 对齐类型
-        /// </summary>
-        UIAlignType AlignType { get; set; }
-        
-        /// <summary>
         /// 初始化UI
         /// </summary>
         void Initialize();

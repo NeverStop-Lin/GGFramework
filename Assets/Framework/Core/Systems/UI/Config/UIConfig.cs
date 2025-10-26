@@ -21,11 +21,6 @@ namespace Framework.Core
         public UIType UIType = UIType.Main;
         
         /// <summary>
-        /// 对齐方式
-        /// </summary>
-        public UIAlignType AlignType = UIAlignType.Center;
-        
-        /// <summary>
         /// 缓存策略
         /// </summary>
         public UICacheStrategy CacheStrategy = UICacheStrategy.AlwaysCache;
@@ -55,7 +50,6 @@ namespace Framework.Core
             {
                 ResourcePath = this.ResourcePath,
                 UIType = this.UIType,
-                AlignType = this.AlignType,
                 CacheStrategy = this.CacheStrategy,
                 Layer = this.Layer,
                 UseMask = this.UseMask,

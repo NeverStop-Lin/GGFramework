@@ -20,7 +20,6 @@ namespace Game.UI
             {
                 ResourcePath = "UI/GameUI",
                 UIType = UIType.Main,
-                AlignType = UIAlignType.Center,
                 CacheStrategy = UICacheStrategy.AlwaysCache
             };
         }

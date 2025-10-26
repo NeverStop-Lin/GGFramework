@@ -51,11 +51,6 @@ namespace Framework.Core
         public readonly ActionUiAttachment Action = new ActionUiAttachment();
         
         /// <summary>
-        /// UI对齐类型（实现IBaseUI接口）
-        /// </summary>
-        public UIAlignType AlignType { get; set; } = UIAlignType.Center;
-        
-        /// <summary>
         /// UI类型（实现IBaseUI接口）
         /// </summary>
         public UIType UIType { get; set; } = UIType.Main;
@@ -344,7 +339,6 @@ namespace Framework.Core
             return new UIConfig
             {
                 UIType = UIType.Main,
-                AlignType = UIAlignType.Center,
                 CacheStrategy = UICacheStrategy.AlwaysCache
             };
         }

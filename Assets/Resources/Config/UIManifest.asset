@@ -21,10 +21,6 @@ MonoBehaviour:
       CacheStrategy: 1
       Layer: 0
       UseMask: 0
-      MaskColor: {r: 0, g: 0, b: 0, a: 0.5}
-      UseAnimation: 0
-      AnimationType: 1
-      AnimationDuration: 0.3
       Preload: 0
   - UIName: MainMenuUI
     Config:
@@ -34,8 +30,4 @@ MonoBehaviour:
       CacheStrategy: 1
       Layer: 0
       UseMask: 0
-      MaskColor: {r: 0, g: 0, b: 0, a: 0.5}
-      UseAnimation: 0
-      AnimationType: 1
-      AnimationDuration: 0.3
       Preload: 0

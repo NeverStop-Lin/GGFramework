@@ -48,10 +48,6 @@ namespace Framework.Core
                 : codeConfig.CacheStrategy;
             
             // 其他属性按相同逻辑合并
-            merged.AlignType = manifestConfig.AlignType != UIAlignType.Center || codeConfig.AlignType == UIAlignType.Center
-                ? manifestConfig.AlignType
-                : codeConfig.AlignType;
-            
             merged.Layer = manifestConfig.Layer != 0 ? manifestConfig.Layer : codeConfig.Layer;
             merged.UseMask = manifestConfig.UseMask || codeConfig.UseMask;
             merged.Preload = manifestConfig.Preload || codeConfig.Preload;
