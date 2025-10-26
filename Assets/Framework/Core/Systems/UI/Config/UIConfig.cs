@@ -37,28 +37,9 @@ namespace Framework.Core
         
         /// <summary>
         /// 是否使用遮罩（通常用于Popup）
+        /// TODO: 遮罩功能待实现
         /// </summary>
         public bool UseMask = false;
-        
-        /// <summary>
-        /// 遮罩颜色（半透明黑色）
-        /// </summary>
-        public UnityEngine.Color MaskColor = new UnityEngine.Color(0, 0, 0, 0.5f);
-        
-        /// <summary>
-        /// 是否使用动画
-        /// </summary>
-        public bool UseAnimation = false;
-        
-        /// <summary>
-        /// 动画类型
-        /// </summary>
-        public UIAnimationType AnimationType = UIAnimationType.Fade;
-        
-        /// <summary>
-        /// 动画持续时间（秒）
-        /// </summary>
-        public float AnimationDuration = 0.3f;
         
         /// <summary>
         /// 是否预加载
@@ -78,10 +59,6 @@ namespace Framework.Core
                 CacheStrategy = this.CacheStrategy,
                 Layer = this.Layer,
                 UseMask = this.UseMask,
-                MaskColor = this.MaskColor,
-                UseAnimation = this.UseAnimation,
-                AnimationType = this.AnimationType,
-                AnimationDuration = this.AnimationDuration,
                 Preload = this.Preload
             };
         }

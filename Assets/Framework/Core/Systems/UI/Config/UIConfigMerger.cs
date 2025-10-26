@@ -54,10 +54,6 @@ namespace Framework.Core
             
             merged.Layer = manifestConfig.Layer != 0 ? manifestConfig.Layer : codeConfig.Layer;
             merged.UseMask = manifestConfig.UseMask || codeConfig.UseMask;
-            merged.MaskColor = manifestConfig.UseMask ? manifestConfig.MaskColor : codeConfig.MaskColor;
-            merged.UseAnimation = manifestConfig.UseAnimation || codeConfig.UseAnimation;
-            merged.AnimationType = manifestConfig.UseAnimation ? manifestConfig.AnimationType : codeConfig.AnimationType;
-            merged.AnimationDuration = manifestConfig.AnimationDuration != 0.3f ? manifestConfig.AnimationDuration : codeConfig.AnimationDuration;
             merged.Preload = manifestConfig.Preload || codeConfig.Preload;
             
             return merged;

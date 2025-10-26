@@ -443,11 +443,6 @@ namespace Framework.Core
                 // TODO: 添加MaskUIAttachment
             }
             
-            if (_config.UseAnimation && _config.AnimationType != UIAnimationType.None && _config.AnimationType != UIAnimationType.Custom)
-            {
-                // TODO: 根据AnimationType创建对应的动画Attachment
-            }
-            
             // 让子类添加自定义Attachment
             OnAttachmentInitialize(attachments);
         }

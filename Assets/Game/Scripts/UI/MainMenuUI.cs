@@ -21,8 +21,7 @@ namespace Game.UI
                 ResourcePath = "UI/MainMenuUI",
                 UIType = UIType.Main,
                 AlignType = UIAlignType.Center,
-                CacheStrategy = UICacheStrategy.AlwaysCache,
-                UseAnimation = false
+                CacheStrategy = UICacheStrategy.AlwaysCache
             };
         }
         
