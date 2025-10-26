@@ -185,7 +185,7 @@ Unity: OnDestroy()  ← Unity钩子（自动调用）
          ↓
 执行Destroy Pipeline
          ↓
-UIBehaviour.OnUIDestroy(args)  ← 业务回调
+UIBehaviour.OnRemove(args)  ← 业务回调
          ↓
 Destroy(gameObject)  ← 已经在销毁了，不会重复
 ```
@@ -374,18 +374,18 @@ var stateConfigurations = new[]
 
 ### 1. 命名清晰 ✅
 - `OnDestroy()` - 一看就知道是Unity钩子
-- `OnUIDestroy(params object[] args)` - 一看就知道是UI业务回调
+- `OnRemove(params object[] args)` - 一看就知道是UI业务回调
 
 ### 2. 职责分离 ✅
 - `OnDestroy()` - 确保Pipeline被执行
-- `OnUIDestroy()` - 清理资源和业务逻辑
+- `OnRemove()` - 清理资源和业务逻辑
 
 ### 3. 防呆设计 ✅
 - 无论如何销毁GameObject，都能正确执行清理逻辑
 - 避免重复执行（通过uiState检测）
 
 ### 4. 子类友好 ✅
-- 开发者只需重写`OnUIDestroy()`即可
+- 开发者只需重写`OnRemove()`即可
 - 不需要关心复杂的Pipeline和Unity生命周期
 
 ### 5. 可测试性 ✅
@@ -501,7 +501,7 @@ public class GameUI : UIBehaviour
     private List<Enemy> _enemies;
     private AudioSource _bgm;
     
-    protected override void OnUIDestroy(params object[] args)
+    protected override void OnRemove(params object[] args)
     {
         try
         {
@@ -540,7 +540,7 @@ public class GameUI : UIBehaviour
         finally
         {
             // 4. 始终调用base
-            base.OnUIDestroy(args);
+            base.OnRemove(args);
         }
     }
 }
