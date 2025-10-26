@@ -9,7 +9,11 @@ namespace Framework.Core
     /// <summary>
     /// 基于UGUI的BaseUI实现
     /// 提供UI对象的基础管理功能
+    /// 
+    /// 已废弃：请使用 UGUIBaseUIBehaviour 代替
+    /// 此类保留用于兼容性，将在未来版本中移除
     /// </summary>
+    [Obsolete("请使用 UGUIBaseUIBehaviour 代替。UGUIBaseUI是普通类架构，UGUIBaseUIBehaviour是MonoBehaviour架构。", false)]
     public abstract class UGUIBaseUI : BaseUI
     {
         #region 字段

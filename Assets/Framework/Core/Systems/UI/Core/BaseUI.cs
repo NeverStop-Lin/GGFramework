@@ -6,6 +6,11 @@ using Zenject;
 
 namespace Framework.Core
 {
+    /// <summary>
+    /// 已废弃：请使用 BaseUIBehaviour 代替
+    /// 此类保留用于兼容性，将在未来版本中移除
+    /// </summary>
+    [Obsolete("请使用 BaseUIBehaviour 代替。BaseUI是普通类架构，BaseUIBehaviour是MonoBehaviour架构。", false)]
     public abstract class BaseUI : UIAttachment, IBaseUI
     {
 
