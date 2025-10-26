@@ -5,9 +5,9 @@ namespace Framework.Core
     public interface IBaseUI
     {
         /// <summary>
-        /// UI类型
+        /// UI层级名称
         /// </summary>
-        UIType UIType { get; set; }
+        string LayerName { get; set; }
         
         /// <summary>
         /// 初始化UI
@@ -15,27 +15,32 @@ namespace Framework.Core
         void Initialize();
         
         /// <summary>
-        /// 执行Create Pipeline
+        /// 执行Create
         /// </summary>
         Task<object> DoCreate(params object[] args);
         
         /// <summary>
-        /// 执行Show Pipeline
+        /// 执行Show
         /// </summary>
         Task<object> DoShow(params object[] args);
         
         /// <summary>
-        /// 执行Ready Pipeline
+        /// 执行Show动画
         /// </summary>
-        Task<object> DoReady(params object[] args);
+        Task<object> DoShowAnim(params object[] args);
         
         /// <summary>
-        /// 执行Hide Pipeline
+        /// 执行Hide
         /// </summary>
         Task<object> DoHide(params object[] args);
         
         /// <summary>
-        /// 执行Destroy Pipeline
+        /// 执行Hide动画
+        /// </summary>
+        Task<object> DoHideAnim(params object[] args);
+        
+        /// <summary>
+        /// 执行Destroy
         /// </summary>
         Task<object> DoDestroy(params object[] args);
         

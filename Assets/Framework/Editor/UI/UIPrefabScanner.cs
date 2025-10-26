@@ -76,14 +76,8 @@ namespace Framework.Editor.UI
                 return result;
             }
             
-            Debug.Log($"[UIPrefabScanner] 开始扫描Prefab: {prefab.name}");
-            Debug.Log($"[UIPrefabScanner] Prefab类型: {prefab.GetType()}");
-            Debug.Log($"[UIPrefabScanner] 是否是Prefab资产: {UnityEditor.PrefabUtility.IsPartOfPrefabAsset(prefab)}");
-            
             // 递归扫描所有子节点
             ScanTransform(prefab.transform, "", result);
-            
-            Debug.Log($"[UIPrefabScanner] 扫描完成，找到 {result.Components.Count} 个组件，{result.Errors.Count} 个错误");
             
             return result;
         }
@@ -118,7 +112,7 @@ namespace Framework.Editor.UI
         {
             var nodeName = trans.name;
             
-            Debug.Log($"[UIPrefabScanner] 处理标记节点: {nodeName} at {path}");
+            // 处理标记节点
             
             // 解析标记：@ComponentType_ComponentName
             // 例如：@Button_Start -> ComponentType=Button, ComponentName=Start
@@ -134,7 +128,6 @@ namespace Framework.Editor.UI
             var componentType = match.Groups[1].Value;
             var componentName = match.Groups[2].Value;
             
-            Debug.Log($"[UIPrefabScanner] 解析结果 - 类型: {componentType}, 名称: {componentName}");
             
             // 检查是否是支持的组件类型（直接从Map获取Type对象）
             if (!ComponentTypeMap.TryGetValue(componentType, out var type))
@@ -144,28 +137,22 @@ namespace Framework.Editor.UI
                 return;
             }
             
-            Debug.Log($"[UIPrefabScanner] 从Map获取的类型: {type.FullName}");
             
             // 验证组件是否存在
             Component component = null;
             
-            Debug.Log($"[UIPrefabScanner] 开始验证组件...");
             
             if (componentType == "GameObject")
             {
                 // GameObject不需要验证组件
-                Debug.Log($"[UIPrefabScanner] GameObject类型，无需验证组件");
             }
             else if (componentType == "Transform")
             {
                 component = trans;
-                Debug.Log($"[UIPrefabScanner] Transform类型，直接使用节点的Transform");
             }
             else
             {
-                Debug.Log($"[UIPrefabScanner] 尝试从节点获取组件: {type.Name}");
                 component = trans.GetComponent(type);
-                Debug.Log($"[UIPrefabScanner] GetComponent({type.Name})结果: {(component != null ? "✅找到" : "❌null")}");
                 
                 // 如果找不到，输出节点上所有组件（用于调试）
                 if (component == null)
@@ -179,7 +166,7 @@ namespace Framework.Editor.UI
                 }
                 else
                 {
-                    Debug.Log($"[UIPrefabScanner] ✅ 成功找到组件: {component.GetType().Name}");
+                    // 找到组件
                 }
             }
             
@@ -191,7 +178,6 @@ namespace Framework.Editor.UI
                 return;
             }
             
-            Debug.Log($"[UIPrefabScanner] 组件验证成功: {componentType}");
             
             // 生成字段名：_startButton
             var fieldName = GenerateFieldName(componentName, componentType);
@@ -209,7 +195,6 @@ namespace Framework.Editor.UI
                 EventHandlerName = GenerateEventHandlerName(componentName)
             };
             
-            Debug.Log($"[UIPrefabScanner] ✅ 组件信息创建成功: {info}");
             
             result.Components.Add(info);
         }

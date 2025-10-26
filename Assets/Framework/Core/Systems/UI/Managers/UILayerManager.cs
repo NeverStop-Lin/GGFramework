@@ -5,22 +5,13 @@ namespace Framework.Core
 {
     /// <summary>
     /// UI层级管理器
-    /// 负责自动分配UI的sortingOrder，避免层级冲突
+    /// 负责管理UI的sortingOrder分配
+    /// 基于UIProjectConfig的层级定义
     /// </summary>
     public class UILayerManager
     {
-        // 层级区间定义
-        private const int MAIN_LAYER_START = 0;
-        private const int MAIN_LAYER_END = 99;
-        private const int POPUP_LAYER_START = 100;
-        private const int POPUP_LAYER_END = 199;
-        private const int TOP_LAYER_START = 200;
-        private const int TOP_LAYER_END = 299;
-        
-        // 记录每个层级区间当前分配到的索引
-        private int _mainLayerIndex = MAIN_LAYER_START;
-        private int _popupLayerIndex = POPUP_LAYER_START;
-        private int _topLayerIndex = TOP_LAYER_START;
+        // 记录每个层级的当前索引
+        private readonly Dictionary<string, int> _layerCounters = new Dictionary<string, int>();
         
         // 记录UI的层级
         private readonly Dictionary<Type, int> _uiLayers = new Dictionary<Type, int>();
@@ -29,56 +20,31 @@ namespace Framework.Core
         /// 为UI分配层级
         /// </summary>
         /// <param name="uiType">UI类型</param>
-        /// <param name="layerType">层级类型</param>
+        /// <param name="layerName">层级名称</param>
         /// <returns>分配的sortingOrder</returns>
-        public int AllocateLayer(Type uiType, UIType layerType)
+        public int AllocateLayer(Type uiType, string layerName)
         {
-            int layer;
+            // 获取层级基础sortingOrder
+            var baseSortingOrder = UIProjectConfigManager.GetBaseSortingOrder(layerName);
             
-            switch (layerType)
+            // 获取该层级的计数器
+            if (!_layerCounters.TryGetValue(layerName, out var counter))
             {
-                case UIType.Main:
-                    layer = _mainLayerIndex++;
-                    if (_mainLayerIndex > MAIN_LAYER_END)
-                    {
-                        FrameworkLogger.Warn($"[UILayer] Main层级已满，重置为 {MAIN_LAYER_START}");
-                        _mainLayerIndex = MAIN_LAYER_START;
-                        layer = _mainLayerIndex++;
-                    }
-                    break;
-                    
-                case UIType.Popup:
-                    layer = _popupLayerIndex++;
-                    if (_popupLayerIndex > POPUP_LAYER_END)
-                    {
-                        FrameworkLogger.Warn($"[UILayer] Popup层级已满，重置为 {POPUP_LAYER_START}");
-                        _popupLayerIndex = POPUP_LAYER_START;
-                        layer = _popupLayerIndex++;
-                    }
-                    break;
-                    
-                case UIType.Top:
-                    layer = _topLayerIndex++;
-                    if (_topLayerIndex > TOP_LAYER_END)
-                    {
-                        FrameworkLogger.Warn($"[UILayer] Top层级已满，重置为 {TOP_LAYER_START}");
-                        _topLayerIndex = TOP_LAYER_START;
-                        layer = _topLayerIndex++;
-                    }
-                    break;
-                    
-                case UIType.Effect:
-                default:
-                    // Effect使用Popup层
-                    layer = _popupLayerIndex++;
-                    break;
+                counter = 0;
             }
             
-            _uiLayers[uiType] = layer;
+            // 计算最终的sortingOrder：基础值 + 计数器
+            var finalSortingOrder = baseSortingOrder + counter;
             
-            FrameworkLogger.Info($"[UILayer] 分配层级: {uiType.Name} -> {layer} ({layerType})");
+            // 递增计数器
+            _layerCounters[layerName] = counter + 1;
             
-            return layer;
+            // 记录UI的层级
+            _uiLayers[uiType] = finalSortingOrder;
+            
+            FrameworkLogger.Info($"[UILayerManager] 分配层级: {uiType.Name} -> {finalSortingOrder} (Layer={layerName}, Base={baseSortingOrder}, Offset={counter})");
+            
+            return finalSortingOrder;
         }
         
         /// <summary>
@@ -96,7 +62,7 @@ namespace Framework.Core
         {
             if (_uiLayers.Remove(uiType))
             {
-                FrameworkLogger.Info($"[UILayer] 释放层级: {uiType.Name}");
+                FrameworkLogger.Info($"[UILayerManager] 释放层级: {uiType.Name}");
             }
         }
         
@@ -106,11 +72,18 @@ namespace Framework.Core
         public void Clear()
         {
             _uiLayers.Clear();
-            _mainLayerIndex = MAIN_LAYER_START;
-            _popupLayerIndex = POPUP_LAYER_START;
-            _topLayerIndex = TOP_LAYER_START;
+            _layerCounters.Clear();
             
-            FrameworkLogger.Info("[UILayer] 清空所有层级");
+            FrameworkLogger.Info("[UILayerManager] 清空所有层级");
+        }
+        
+        /// <summary>
+        /// 重置层级计数器
+        /// </summary>
+        public void ResetCounters()
+        {
+            _layerCounters.Clear();
+            FrameworkLogger.Info("[UILayerManager] 重置层级计数器");
         }
     }
 }

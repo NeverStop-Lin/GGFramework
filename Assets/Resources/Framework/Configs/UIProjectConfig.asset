@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05194e7f2a7fbe24e86d5c1869ce4765, type: 3}
+  m_Name: UIProjectConfig
+  m_EditorClassIdentifier: 
+  _referenceResolutionWidth: 1280
+  _referenceResolutionHeight: 720
+  _matchWidthOrHeight: 1
+  _layerDefinitions:
+  - LayerName: Main
+    BaseSortingOrder: 0
+    Description: "\u4E3B\u754C\u9762\u5C42\u7EA7\uFF0C\u7528\u4E8E\u5168\u5C4FUI"
+  - LayerName: Popup
+    BaseSortingOrder: 1000
+    Description: "\u5F39\u7A97\u5C42\u7EA7\uFF0C\u7528\u4E8E\u5F39\u51FA\u5F0FUI"
+  - LayerName: Top
+    BaseSortingOrder: 2000
+    Description: "\u9876\u5C42\u5C42\u7EA7\uFF0C\u7528\u4E8E\u59CB\u7EC8\u663E\u793A\u5728\u6700\u4E0A\u5C42\u7684UI"
+  _uiConfigs:
+  - UIName: GameUI
+    ResourcePath: UI/GameUI
+    LayerName: Main
+    CacheStrategy: 0
+    Preload: 0
+    UseMask: 0
+  - UIName: MainMenuUI
+    ResourcePath: UI/MainMenuUI
+    LayerName: Main
+    CacheStrategy: 0
+    Preload: 0
+    UseMask: 0

@@ -21,7 +21,7 @@ namespace Framework.Core
         public IBaseUI Create(Type uiType)
         {
             // 获取UI配置
-            var config = UIManifestManager.GetConfig(uiType);
+            var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
             
             // 方式1: 从Prefab创建（推荐）
             if (config != null && !string.IsNullOrEmpty(config.ResourcePath))

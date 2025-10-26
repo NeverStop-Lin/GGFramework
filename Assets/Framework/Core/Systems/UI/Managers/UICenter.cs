@@ -31,6 +31,9 @@ namespace Framework.Core
         private readonly UILayerManager _layerManager = new UILayerManager();
         private readonly UIStateManager _stateManager = new UIStateManager();
         
+        // 层级计数器（用于同层级UI的sortingOrder递增）
+        private readonly Dictionary<string, int> _layerCounters = new Dictionary<string, int>();
+        
         #endregion
         
         #region 基础API
@@ -101,7 +104,7 @@ namespace Framework.Core
                 
                 await CreateAsync(ui, args, uiState, uiType);
                 await ShowAsync(ui, args, uiState, uiType);
-                await ReadyAsync(ui, args, uiState);
+                await ShowAnimAsync(ui, args, uiState, uiType);
                 
                 _stateManager.SetState(uiType, UIRuntimeState.Showing);
                 
@@ -122,7 +125,7 @@ namespace Framework.Core
             try
             {
                 await ShowAsync(ui, args, uiState, uiType);
-                await ReadyAsync(ui, args, uiState);
+                await ShowAnimAsync(ui, args, uiState, uiType);
                 
                 _stateManager.SetState(uiType, UIRuntimeState.Showing);
                 
@@ -132,7 +135,6 @@ namespace Framework.Core
             {
                 FrameworkLogger.Error($"[UICenter] UI显示异常: {ui.GetType().Name}, {ex.Message}");
                 uiState.ShowTcs?.TrySetException(ex);
-                uiState.ReadyTcs?.TrySetException(ex);
             }
         }
 
@@ -142,6 +144,9 @@ namespace Framework.Core
             {
                 var result = await ui.DoCreate(args);
                 uiState.CreateTcs?.TrySetResult(result);
+                
+                // 发送创建事件
+                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Create, uiType.Name);
                 
                 FrameworkLogger.Info($"[UICenter] UI创建成功: {uiType.Name}");
             }
@@ -160,14 +165,14 @@ namespace Framework.Core
                 var result = await ui.DoShow(args);
                 uiState.ShowTcs?.TrySetResult(result);
                 
-                // 分配层级
+                // 分配层级（使用增强的排序逻辑）
                 if (ui is UIBehaviour ugui)
                 {
-                    var config = UIManifestManager.GetConfig(uiType);
-                    var layerType = config?.UIType ?? UIType.Main;
-                    var layer = _layerManager.AllocateLayer(uiType, layerType);
-                    ugui.SetIndex(layer);
+                    AssignSortingOrder(ugui);
                 }
+                
+                // 发送显示事件
+                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Show, uiType.Name);
                 
                 FrameworkLogger.Info($"[UICenter] UI显示成功: {uiType.Name}");
             }
@@ -179,16 +184,21 @@ namespace Framework.Core
             }
         }
 
-        private async Task ReadyAsync(IBaseUI ui, object[] args, UiState uiState)
+        private async Task ShowAnimAsync(IBaseUI ui, object[] args, UiState uiState, Type uiType)
         {
             try
             {
-                var result = await ui.DoReady(args);
+                var result = await ui.DoShowAnim(args);
                 uiState.ReadyTcs?.TrySetResult(result);
+                
+                // 发送动画完成事件（复用Ready事件）
+                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Ready, uiType.Name);
+                
+                FrameworkLogger.Info($"[UICenter] UI显示动画完成: {uiType.Name}");
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI Ready失败: {ui.GetType().Name}, {ex.Message}");
+                FrameworkLogger.Error($"[UICenter] UI显示动画失败: {ui.GetType().Name}, {ex.Message}");
                 uiState.ReadyTcs?.TrySetException(ex);
                 throw;
             }
@@ -225,7 +235,7 @@ namespace Framework.Core
         }
 
         /// <summary>
-        /// 执行隐藏操作（修复Bug #3）
+        /// 执行隐藏操作
         /// </summary>
         private async Task<object> HideAsync(IBaseUI ui, object[] args, UiState uiState, Type uiType)
         {
@@ -233,19 +243,28 @@ namespace Framework.Core
             {
                 _stateManager.SetState(uiType, UIRuntimeState.Hidden);
                 
-                var result = await ui.DoHide(args);
-                uiState.HideTcs?.TrySetResult(result);
+                // 调用 OnHide
+                await ui.DoHide(args);
+                
+                // 播放隐藏动画
+                await ui.DoHideAnim(args);
+                
+                // 设置结果
+                uiState.HideTcs?.TrySetResult(null);
+                
+                // 发送隐藏事件
+                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Hide, uiType.Name);
                 
                 FrameworkLogger.Info($"[UICenter] UI隐藏成功: {uiType.Name}");
                 
                 // 根据缓存策略决定是否销毁
-                var config = UIManifestManager.GetConfig(uiType);
+                var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
                 if (config?.CacheStrategy == UICacheStrategy.NeverCache)
                 {
                     await DestroyUI(uiType);
                 }
                 
-                return result; // 修复Bug #3：正确返回
+                return null;
             }
             catch (Exception ex)
             {
@@ -287,6 +306,9 @@ namespace Framework.Core
                     _stateManager.SetState(uiType, UIRuntimeState.Destroying);
                     
                     await uiState.Ui.DoDestroy();
+                    
+                    // 发送销毁事件
+                    EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Destroy, uiType.Name);
                     
                     // 从管理器中移除
                     _instanceManager.RemoveInstance(uiType);
@@ -524,6 +546,30 @@ namespace Framework.Core
         #endregion
         
         #region 私有方法
+        
+        /// <summary>
+        /// 分配sortingOrder（从SortUIAttachment迁移）
+        /// </summary>
+        private void AssignSortingOrder(UIBehaviour ui)
+        {
+            var layerName = ui.LayerName ?? "Main";
+            var baseSortingOrder = UIProjectConfigManager.GetBaseSortingOrder(layerName);
+            
+            // 获取该层级当前的计数器
+            if (!_layerCounters.TryGetValue(layerName, out var counter))
+            {
+                counter = 0;
+            }
+            
+            // 同层级UI按打开顺序递增sortingOrder
+            var finalSortingOrder = baseSortingOrder + counter;
+            ui.SetIndex(finalSortingOrder);
+            
+            // 递增计数器
+            _layerCounters[layerName] = counter + 1;
+            
+            FrameworkLogger.Info($"[UICenter] 分配sortingOrder: {ui.GetType().Name}, Layer={layerName}, BaseSortingOrder={baseSortingOrder}, FinalSortingOrder={finalSortingOrder}");
+        }
         
         /// <summary>
         /// 移除UI
