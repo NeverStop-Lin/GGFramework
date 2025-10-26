@@ -50,8 +50,9 @@ namespace Framework.Core
         /// <summary>
         /// Unity OnDestroy钩子（GameObject销毁时）
         /// 自动触发Destroy Pipeline
+        /// 使用new关键字明确隐藏MonoBehaviour.OnDestroy
         /// </summary>
-        protected virtual void OnDestroy()
+        protected virtual new void OnDestroy()
         {
             // 如果是通过DoDestroy销毁的，不要重复执行
             if (uiState == UIState.Destroy)

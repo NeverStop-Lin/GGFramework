@@ -42,20 +42,11 @@ namespace Framework.Scripts
             Container.Bind<CommonUIModule>().To<CommonUIModule>().AsSingle();
             Container.Bind<PoolModule>().To<PoolModule>().AsSingle();
 
-            // 绑定工厂（双轨制：新旧架构并存）
-            // 旧版本UI工厂（普通类）
+            // 绑定工厂
+            // 暂时保持旧工厂，因为现有UI类（MainMenuUI, GameUI）还未迁移
+            // 等迁移完成后再切换到UIFactoryBehaviour
             Container.BindFactory<Type, IBaseUI, PlaceholderFactory<Type, IBaseUI>>()
-                .FromFactory<UIFactory>()
-                .WithId("Legacy");
-            
-            // 新版本UI工厂（MonoBehaviour）
-            Container.BindFactory<Type, IBaseUI, PlaceholderFactory<Type, IBaseUI>>()
-                .FromFactory<UIFactoryBehaviour>()
-                .WithId("MonoBehaviour");
-            
-            // 默认工厂（MonoBehaviour）- 优先使用新架构
-            Container.BindFactory<Type, IBaseUI, PlaceholderFactory<Type, IBaseUI>>()
-                .FromFactory<UIFactoryBehaviour>();
+                .FromFactory<UIFactory>();
 
             Container.BindFactory<Type, Observer, PlaceholderFactory<Type, Observer>>()
                 .FromFactory<ObserverFactory>();

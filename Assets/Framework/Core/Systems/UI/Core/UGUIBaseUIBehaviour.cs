@@ -158,8 +158,11 @@ namespace Framework.Core
         }
         
         /// <summary>
-        /// 销毁UI时调用
+        /// UI销毁时调用（Pipeline回调）
+        /// 注意：这是我们自定义的OnDestroy(params object[] args)，不是Unity的OnDestroy()钩子
+        /// Unity的OnDestroy()钩子在BaseUIBehaviour中处理
         /// </summary>
+        #pragma warning disable UNT0006 // Incorrect message signature
         protected override void OnDestroy(params object[] args)
         {
             // GameObject.Destroy在DoDestroy中会调用
@@ -170,6 +173,7 @@ namespace Framework.Core
             
             FrameworkLogger.Info($"[UGUI] UI销毁: {GetType().Name}");
         }
+        #pragma warning restore UNT0006
         
         #endregion
         
