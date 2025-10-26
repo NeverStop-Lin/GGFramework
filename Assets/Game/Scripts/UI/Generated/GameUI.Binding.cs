@@ -18,24 +18,6 @@ namespace Game.UI
     {
         #region Auto-Generated Fields
         
-        /// <summary>
-        /// Start
-        /// 路径: GameUI/Panel/@Button_Start
-        /// </summary>
-        private Button _startButton;
-        
-        /// <summary>
-        /// Settings
-        /// 路径: GameUI/Panel/@Button_Settings
-        /// </summary>
-        private Button _settingsButton;
-        
-        /// <summary>
-        /// Title
-        /// 路径: GameUI/Panel/@Text_Title
-        /// </summary>
-        private Text _titleText;
-        
         #endregion
         
         #region Auto-Generated Binding
@@ -49,40 +31,9 @@ namespace Game.UI
             base.BindComponents();
             
             // 注意：路径是相对于当前GameObject的，不包含根节点名称
-            _startButton = FindComponent<Button>("Panel/@Button_Start");
-            _settingsButton = FindComponent<Button>("Panel/@Button_Settings");
-            _titleText = FindComponent<Text>("Panel/@Text_Title");
         }
         
         #endregion
         
-        #region Auto-Generated Events
-        
-        /// <summary>
-        /// 注册所有Button事件
-        /// </summary>
-        protected override void RegisterEvents()
-        {
-            base.RegisterEvents();
-            
-            _startButton.onClick.AddListener(OnStartClick);
-            _settingsButton.onClick.AddListener(OnSettingsClick);
-        }
-        
-        /// <summary>
-        /// 注销所有Button事件
-        /// </summary>
-        protected override void UnregisterEvents()
-        {
-            // 添加空检查，防止组件未找到时出错
-            if (_startButton != null)
-                _startButton.onClick.RemoveListener(OnStartClick);
-            if (_settingsButton != null)
-                _settingsButton.onClick.RemoveListener(OnSettingsClick);
-            
-            base.UnregisterEvents();
-        }
-        
-        #endregion
     }
 }

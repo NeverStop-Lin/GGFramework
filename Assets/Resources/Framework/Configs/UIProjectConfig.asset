@@ -32,9 +32,11 @@ MonoBehaviour:
     CacheStrategy: 0
     Preload: 0
     UseMask: 0
+    InstanceStrategy: 0
   - UIName: MainMenuUI
     ResourcePath: UI/MainMenuUI
     LayerName: Main
     CacheStrategy: 0
     Preload: 0
     UseMask: 0
+    InstanceStrategy: 0

@@ -11,7 +11,7 @@ namespace Framework.Editor.Excel
 {
     public class ExcelConfigGenerator : EditorWindow
     {
-        private const string EXCEL_ROOT = "Assets/../../Excel/";
+        private const string EXCEL_ROOT = "Assets/../Excel/";
         private const string JSON_OUTPUT = "Assets/Resources/Configs/";
         private const string CSHARP_OUTPUT = "Assets/Generate/Scripts/Configs/";
 
