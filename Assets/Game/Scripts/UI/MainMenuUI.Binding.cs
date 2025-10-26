@@ -49,9 +49,10 @@ namespace Game.UI
         {
             base.BindComponents();
             
-            _startButton = FindComponent<Button>("MainMenuUI/Panel/@Button_Start");
-            _settingsButton = FindComponent<Button>("MainMenuUI/Panel/@Button_Settings");
-            _titleText = FindComponent<Text>("MainMenuUI/Panel/@Text_Title");
+            // 注意：路径是相对于当前GameObject的，不包含根节点名称
+            _startButton = FindComponent<Button>("Panel/@Button_Start");
+            _settingsButton = FindComponent<Button>("Panel/@Button_Settings");
+            _titleText = FindComponent<Text>("Panel/@Text_Title");
         }
         
         #endregion
@@ -74,8 +75,11 @@ namespace Game.UI
         /// </summary>
         protected override void UnregisterEvents()
         {
-            _startButton.onClick.RemoveListener(OnStartClick);
-            _settingsButton.onClick.RemoveListener(OnSettingsClick);
+            // 添加空检查，防止组件未找到时出错
+            if (_startButton != null)
+                _startButton.onClick.RemoveListener(OnStartClick);
+            if (_settingsButton != null)
+                _settingsButton.onClick.RemoveListener(OnSettingsClick);
             
             base.UnregisterEvents();
         }
