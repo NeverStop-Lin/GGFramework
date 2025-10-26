@@ -159,7 +159,8 @@ namespace Framework.Editor.UI
                 Prefab = null,  // Prefab不存在
                 PrefabPath = config.ResourcePath,
                 UIName = config.UIName,
-                LayerName = config.LayerName
+                LayerName = config.LayerName,
+                InstanceStrategy = config.InstanceStrategy
             };
             
             // 检查状态
@@ -195,6 +196,7 @@ namespace Framework.Editor.UI
             if (uiConfig != null)
             {
                 info.LayerName = uiConfig.LayerName;
+                info.InstanceStrategy = uiConfig.InstanceStrategy;
             }
             else
             {
@@ -202,6 +204,7 @@ namespace Framework.Editor.UI
                 info.LayerName = _config.LayerDefinitions.Count > 0 
                     ? _config.LayerDefinitions[0].LayerName 
                     : "Main";
+                info.InstanceStrategy = UIInstanceStrategy.Singleton;
             }
             
             // 判断状态
@@ -337,6 +340,7 @@ namespace Framework.Editor.UI
             EditorGUILayout.LabelField("Logic.cs", GUILayout.Width(100));
             EditorGUILayout.LabelField("Binding.cs", GUILayout.Width(100));
             EditorGUILayout.LabelField("层级", GUILayout.Width(100));
+            EditorGUILayout.LabelField("实例策略", GUILayout.Width(100));
             EditorGUILayout.LabelField("操作", GUILayout.Width(100));
             EditorGUILayout.LabelField("删除", GUILayout.Width(60));
             EditorGUILayout.EndHorizontal();
@@ -393,6 +397,9 @@ namespace Framework.Editor.UI
             
             // 层级（下拉选择）
             DrawLayerSelector(info, 100);
+            
+            // 实例策略（下拉选择）
+            DrawInstanceStrategySelector(info, 100);
             
             // 操作按钮
             DrawActionButton(info, 100);
@@ -468,6 +475,24 @@ namespace Framework.Editor.UI
             {
                 info.LayerName = layerNames[newIndex];
             }
+        }
+        
+        private void DrawInstanceStrategySelector(UIPrefabInfo info, int width)
+        {
+            var strategyNames = new[] { "单例", "多实例" };
+            var currentIndex = (int)info.InstanceStrategy;
+            
+            var oldColor = GUI.backgroundColor;
+            // 单例显示绿色，多实例显示蓝色
+            GUI.backgroundColor = currentIndex == 0 ? new Color(0.8f, 1f, 0.8f) : new Color(0.8f, 0.9f, 1f);
+            
+            var newIndex = EditorGUILayout.Popup(currentIndex, strategyNames, GUILayout.Width(width));
+            if (newIndex != currentIndex)
+            {
+                info.InstanceStrategy = (UIInstanceStrategy)newIndex;
+            }
+            
+            GUI.backgroundColor = oldColor;
         }
         
         private void DrawActionButton(UIPrefabInfo info, int width)
@@ -704,7 +729,8 @@ namespace Framework.Editor.UI
                 LayerName = info.LayerName,
                 CacheStrategy = UICacheStrategy.AlwaysCache,
                 Preload = false,
-                UseMask = false
+                UseMask = false,
+                InstanceStrategy = info.InstanceStrategy
             };
             
             _config.AddOrUpdateUIConfig(uiConfig);
@@ -997,25 +1023,26 @@ namespace Framework.Editor.UI
         }
     }
     
-    /// <summary>
-    /// UI Prefab信息
-    /// </summary>
-    public class UIPrefabInfo
-    {
-        public GameObject Prefab;
-        public string PrefabPath;
-        public string UIName;
-        
-        public bool LogicFileExists;
-        public bool BindingFileExists;
-        public bool ConfigExists;
-        
-        public string LogicFilePath;
-        public string BindingFilePath;
-        
-        public string LayerName;
-        public UIPrefabStatus Status;
-    }
+        /// <summary>
+        /// UI Prefab信息
+        /// </summary>
+        public class UIPrefabInfo
+        {
+            public GameObject Prefab;
+            public string PrefabPath;
+            public string UIName;
+            
+            public bool LogicFileExists;
+            public bool BindingFileExists;
+            public bool ConfigExists;
+            
+            public string LogicFilePath;
+            public string BindingFilePath;
+            
+            public string LayerName;
+            public UIInstanceStrategy InstanceStrategy = UIInstanceStrategy.Singleton;
+            public UIPrefabStatus Status;
+        }
     
     /// <summary>
     /// UI Prefab状态

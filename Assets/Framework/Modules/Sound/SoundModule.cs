@@ -12,7 +12,10 @@ namespace Framework.Modules.Sound
     public class SoundModule
     {
         [Inject]
-        IObservers _observers;
+        private IObservers _observers;
+        
+        [Inject]
+        private IResource _resource;
 
         private GameObject _soundObject;
         private AudioSource _audioSource;
@@ -84,7 +87,7 @@ namespace Framework.Modules.Sound
 
         public void PlayMusic(string name)
         {
-            var clip = Resources.Load<AudioClip>($"Sound/{name}");
+            var clip = _resource.Load<AudioClip>($"Sound/{name}");
             PlayMusic(clip);
         }
 
@@ -102,7 +105,7 @@ namespace Framework.Modules.Sound
 
         public void PlayEffect(string name)
         {
-            var clip = Resources.Load<AudioClip>($"Sound/{name}");
+            var clip = _resource.Load<AudioClip>($"Sound/{name}");
             PlayEffect(clip);
         }
         public void PlayEffect(AudioClip clip)

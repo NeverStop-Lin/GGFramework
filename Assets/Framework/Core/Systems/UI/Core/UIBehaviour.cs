@@ -40,6 +40,11 @@ namespace Framework.Core
         /// UI层级名称
         /// </summary>
         public string LayerName { get; set; } = "Main";
+        
+        /// <summary>
+        /// UI实例ID（多实例模式下使用）
+        /// </summary>
+        public string InstanceId { get; internal set; }
 
         #endregion
 
@@ -194,10 +199,17 @@ namespace Framework.Core
         #region 便捷方法
 
         /// <summary>
-        /// 隐藏当前UI
+        /// 隐藏当前UI（支持单例和多实例）
         /// </summary>
         public Task<object> Hide(params object[] args)
         {
+            // 多实例模式：使用instanceId
+            if (!string.IsNullOrEmpty(InstanceId))
+            {
+                return Center.Hide(this.GetType(), InstanceId, args);
+            }
+            
+            // 单例模式：使用Type
             return Center.Hide(this.GetType(), args);
         }
 

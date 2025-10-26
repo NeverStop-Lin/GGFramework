@@ -15,28 +15,55 @@ namespace Framework.Core
         #region 基础API
         
         /// <summary>
-        /// 显示UI
+        /// 显示UI（单例或默认实例）
         /// </summary>
         UiLifeCycle<T> Show<T>(params object[] args) where T : IBaseUI;
         
         /// <summary>
-        /// 隐藏UI
+        /// 显示UI（支持多实例）
         /// </summary>
-        Task<object> Hide<T>(params object[] args);
+        /// <param name="instanceId">实例ID，null表示使用默认实例</param>
+        /// <param name="args">传递给UI的参数</param>
+        UiLifeCycle<T> Show<T>(string instanceId, params object[] args) where T : IBaseUI;
+        
+        /// <summary>
+        /// 隐藏UI（单例或默认实例）
+        /// </summary>
+        Task<object> Hide<T>(params object[] args) where T : IBaseUI;
+        
+        /// <summary>
+        /// 隐藏UI（支持多实例）
+        /// </summary>
+        Task<object> Hide<T>(string instanceId, params object[] args) where T : IBaseUI;
         
         /// <summary>
         /// 隐藏UI（通过Type）
         /// </summary>
         Task<object> Hide(Type uiType, params object[] args);
         
+        /// <summary>
+        /// 隐藏UI（通过Type和实例ID）
+        /// </summary>
+        Task<object> Hide(Type uiType, string instanceId, params object[] args);
+        
         #endregion
         
         #region 实例管理
         
         /// <summary>
-        /// 销毁指定UI
+        /// 销毁指定UI（单例或默认实例）
         /// </summary>
         Task DestroyUI<T>() where T : IBaseUI;
+        
+        /// <summary>
+        /// 销毁指定UI（支持多实例）
+        /// </summary>
+        Task DestroyUI<T>(string instanceId) where T : IBaseUI;
+        
+        /// <summary>
+        /// 销毁指定类型的所有实例
+        /// </summary>
+        Task DestroyAllInstancesOf<T>() where T : IBaseUI;
         
         /// <summary>
         /// 销毁所有UI
@@ -44,14 +71,24 @@ namespace Framework.Core
         Task DestroyAllUI();
         
         /// <summary>
-        /// 获取UI实例
+        /// 获取UI实例（单例或默认实例）
         /// </summary>
         T GetUI<T>() where T : IBaseUI;
         
         /// <summary>
-        /// 检查UI是否正在显示
+        /// 获取UI实例（支持多实例）
+        /// </summary>
+        T GetUI<T>(string instanceId) where T : IBaseUI;
+        
+        /// <summary>
+        /// 检查UI是否正在显示（单例或是否有任何实例显示）
         /// </summary>
         bool IsShowing<T>() where T : IBaseUI;
+        
+        /// <summary>
+        /// 检查UI实例是否正在显示（支持多实例）
+        /// </summary>
+        bool IsShowing<T>(string instanceId) where T : IBaseUI;
         
         /// <summary>
         /// 获取所有显示中的UI
@@ -96,7 +133,7 @@ namespace Framework.Core
         #region 预加载
         
         /// <summary>
-        /// 预加载UI
+        /// 预加载UI（预加载Prefab资源）
         /// </summary>
         Task PreloadUI<T>() where T : IBaseUI;
         

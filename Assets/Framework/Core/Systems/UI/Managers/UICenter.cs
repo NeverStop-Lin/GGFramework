@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using UnityEngine;
 using Zenject;
 
 namespace Framework.Core
@@ -18,12 +19,15 @@ namespace Framework.Core
         [Inject]
         private DiContainer _container;
         
+        [Inject]
+        private IResource _resource;
+        
         #endregion
         
         #region 字段
         
-        // UI状态字典
-        private readonly ConcurrentDictionary<Type, UiState> _uiStates = new ConcurrentDictionary<Type, UiState>();
+        // UI状态字典（使用UIInstanceKey作为键，支持多实例）
+        private readonly ConcurrentDictionary<UIInstanceKey, UiState> _uiStates = new ConcurrentDictionary<UIInstanceKey, UiState>();
         
         // 四个核心管理器
         private readonly UIInstanceManager _instanceManager = new UIInstanceManager();
@@ -34,17 +38,56 @@ namespace Framework.Core
         // 层级计数器（用于同层级UI的sortingOrder递增）
         private readonly Dictionary<string, int> _layerCounters = new Dictionary<string, int>();
         
+        // 自动实例ID计数器（每个UI类型独立计数）
+        private readonly Dictionary<Type, int> _autoInstanceCounters = new Dictionary<Type, int>();
+        
+        // 自动实例ID前缀（避免与手动ID冲突）
+        private const string AUTO_INSTANCE_PREFIX = "__auto__";
+        
         #endregion
         
         #region 基础API
         
         /// <summary>
         /// 显示UI
+        /// - 单例模式：复用同一实例，刷新层级
+        /// - 多实例模式：自动生成实例ID，创建新实例
         /// </summary>
         public UiLifeCycle<T> Show<T>(params object[] args) where T : IBaseUI
         {
-            var uiKey = typeof(T);
-            FrameworkLogger.Info($"[UICenter] 请求显示UI: {uiKey.Name}");
+            var uiType = typeof(T);
+            var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
+            
+            // 多实例模式：自动生成实例ID
+            if (config?.InstanceStrategy == UIInstanceStrategy.Multiple)
+            {
+                var autoInstanceId = GenerateAutoInstanceId(uiType);
+                return Show<T>(autoInstanceId, args);
+            }
+            
+            // 单例模式：使用null作为instanceId
+            return Show<T>(null, args);
+        }
+        
+        /// <summary>
+        /// 显示UI（手动指定实例ID）
+        /// 注意：单例模式会忽略instanceId参数
+        /// </summary>
+        /// <param name="instanceId">实例ID，null表示使用默认实例</param>
+        /// <param name="args">传递给UI的参数</param>
+        public UiLifeCycle<T> Show<T>(string instanceId, params object[] args) where T : IBaseUI
+        {
+            var uiType = typeof(T);
+            var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
+            
+            // 单例模式下，忽略instanceId，并刷新层级
+            if (config?.InstanceStrategy == UIInstanceStrategy.Singleton)
+            {
+                instanceId = null;
+            }
+            
+            var uiKey = new UIInstanceKey(uiType, instanceId);
+            FrameworkLogger.Info($"[UICenter] 请求显示UI: {uiKey}");
 
             var uiState = _uiStates.GetOrAdd(uiKey, _ => new UiState());
 
@@ -68,20 +111,34 @@ namespace Framework.Core
 
             if (uiState.Ui == null)
             {
-                FrameworkLogger.Info($"[UICenter] 创建新UI实例: {uiKey.Name}");
-                var ui = _container.Resolve<PlaceholderFactory<Type, IBaseUI>>().Create(typeof(T));
+                FrameworkLogger.Info($"[UICenter] 创建新UI实例: {uiKey}");
+                var ui = _container.Resolve<PlaceholderFactory<Type, IBaseUI>>().Create(uiType);
                 ui.Initialize();
                 uiState.Ui = ui;
                 
+                // 设置实例ID（用于多实例模式下UI自己调用Hide）
+                if (ui is UIBehaviour uiBehaviour)
+                {
+                    uiBehaviour.InstanceId = uiKey.InstanceId;
+                }
+                
                 // 添加到实例管理器
-                _instanceManager.AddInstance(uiKey, ui);
+                _instanceManager.AddInstance(uiKey.UIType, ui);
                 
                 // 正确等待异步方法（修复Bug #2）
                 _ = CreateAndShowAsync(ui, args, uiState, uiKey);
             }
             else
             {
-                FrameworkLogger.Info($"[UICenter] 复用已有UI实例: {uiKey.Name}");
+                FrameworkLogger.Info($"[UICenter] 复用已有UI实例: {uiKey}");
+                
+                // 单例模式：刷新层级（置顶）
+                if (config?.InstanceStrategy == UIInstanceStrategy.Singleton && uiState.Ui is UIBehaviour ugui)
+                {
+                    BringUIToFront(ugui);
+                    FrameworkLogger.Info($"[UICenter] 单例UI刷新层级: {uiKey}");
+                }
+                
                 _ = ShowOnlyAsync(uiState.Ui, args, uiState, uiKey);
             }
 
@@ -96,49 +153,49 @@ namespace Framework.Core
         /// <summary>
         /// 创建并显示UI（完整流程）
         /// </summary>
-        private async Task CreateAndShowAsync(IBaseUI ui, object[] args, UiState uiState, Type uiType)
+        private async Task CreateAndShowAsync(IBaseUI ui, object[] args, UiState uiState, UIInstanceKey uiKey)
         {
             try
             {
-                _stateManager.SetState(uiType, UIRuntimeState.Creating);
+                _stateManager.SetState(uiKey.UIType, UIRuntimeState.Creating);
                 
-                await CreateAsync(ui, args, uiState, uiType);
-                await ShowAsync(ui, args, uiState, uiType);
-                await ShowAnimAsync(ui, args, uiState, uiType);
+                await CreateAsync(ui, args, uiState, uiKey);
+                await ShowAsync(ui, args, uiState, uiKey);
+                await ShowAnimAsync(ui, args, uiState, uiKey);
                 
-                _stateManager.SetState(uiType, UIRuntimeState.Showing);
+                _stateManager.SetState(uiKey.UIType, UIRuntimeState.Showing);
                 
-                FrameworkLogger.Info($"[UICenter] UI显示完成: {uiType.Name}");
+                FrameworkLogger.Info($"[UICenter] UI显示完成: {uiKey}");
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI显示异常: {ui.GetType().Name}, {ex.Message}\n{ex.StackTrace}");
-                RemoveUi(ui.GetType(), ex);
+                FrameworkLogger.Error($"[UICenter] UI显示异常: {uiKey}, {ex.Message}\n{ex.StackTrace}");
+                RemoveUi(uiKey, ex);
             }
         }
         
         /// <summary>
         /// 只显示UI（复用已有实例）
         /// </summary>
-        private async Task ShowOnlyAsync(IBaseUI ui, object[] args, UiState uiState, Type uiType)
+        private async Task ShowOnlyAsync(IBaseUI ui, object[] args, UiState uiState, UIInstanceKey uiKey)
         {
             try
             {
-                await ShowAsync(ui, args, uiState, uiType);
-                await ShowAnimAsync(ui, args, uiState, uiType);
+                await ShowAsync(ui, args, uiState, uiKey);
+                await ShowAnimAsync(ui, args, uiState, uiKey);
                 
-                _stateManager.SetState(uiType, UIRuntimeState.Showing);
+                _stateManager.SetState(uiKey.UIType, UIRuntimeState.Showing);
                 
-                FrameworkLogger.Info($"[UICenter] UI显示完成: {uiType.Name}");
+                FrameworkLogger.Info($"[UICenter] UI显示完成: {uiKey}");
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI显示异常: {ui.GetType().Name}, {ex.Message}");
+                FrameworkLogger.Error($"[UICenter] UI显示异常: {uiKey}, {ex.Message}");
                 uiState.ShowTcs?.TrySetException(ex);
             }
         }
 
-        private async Task CreateAsync(IBaseUI ui, object[] args, UiState uiState, Type uiType)
+        private async Task CreateAsync(IBaseUI ui, object[] args, UiState uiState, UIInstanceKey uiKey)
         {
             try
             {
@@ -146,19 +203,19 @@ namespace Framework.Core
                 uiState.CreateTcs?.TrySetResult(result);
                 
                 // 发送创建事件
-                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Create, uiType.Name);
+                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Create, uiKey.ToString());
                 
-                FrameworkLogger.Info($"[UICenter] UI创建成功: {uiType.Name}");
+                FrameworkLogger.Info($"[UICenter] UI创建成功: {uiKey}");
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI创建失败: {uiType.Name}, {ex.Message}");
+                FrameworkLogger.Error($"[UICenter] UI创建失败: {uiKey}, {ex.Message}");
                 uiState.CreateTcs?.TrySetException(ex);
                 throw;
             }
         }
 
-        private async Task ShowAsync(IBaseUI ui, object[] args, UiState uiState, Type uiType)
+        private async Task ShowAsync(IBaseUI ui, object[] args, UiState uiState, UIInstanceKey uiKey)
         {
             try
             {
@@ -172,19 +229,19 @@ namespace Framework.Core
                 }
                 
                 // 发送显示事件
-                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Show, uiType.Name);
+                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Show, uiKey.ToString());
                 
-                FrameworkLogger.Info($"[UICenter] UI显示成功: {uiType.Name}");
+                FrameworkLogger.Info($"[UICenter] UI显示成功: {uiKey}");
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI显示失败: {uiType.Name}, {ex.Message}");
+                FrameworkLogger.Error($"[UICenter] UI显示失败: {uiKey}, {ex.Message}");
                 uiState.ShowTcs?.TrySetException(ex);
                 throw;
             }
         }
 
-        private async Task ShowAnimAsync(IBaseUI ui, object[] args, UiState uiState, Type uiType)
+        private async Task ShowAnimAsync(IBaseUI ui, object[] args, UiState uiState, UIInstanceKey uiKey)
         {
             try
             {
@@ -192,56 +249,89 @@ namespace Framework.Core
                 uiState.ReadyTcs?.TrySetResult(result);
                 
                 // 发送动画完成事件（复用Ready事件）
-                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Ready, uiType.Name);
+                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Ready, uiKey.ToString());
                 
-                FrameworkLogger.Info($"[UICenter] UI显示动画完成: {uiType.Name}");
+                FrameworkLogger.Info($"[UICenter] UI显示动画完成: {uiKey}");
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI显示动画失败: {ui.GetType().Name}, {ex.Message}");
+                FrameworkLogger.Error($"[UICenter] UI显示动画失败: {uiKey}, {ex.Message}");
                 uiState.ReadyTcs?.TrySetException(ex);
                 throw;
             }
         }
 
         /// <summary>
-        /// 隐藏UI
+        /// 隐藏UI（单例或默认实例）
         /// </summary>
-        public Task<object> Hide<T>(params object[] args)
+        Task<object> IUI.Hide<T>(params object[] args)
         {
-            return Hide(typeof(T), args);
+            return Hide<T>(null, args);
+        }
+        
+        /// <summary>
+        /// 隐藏UI（单例或默认实例）- 公共实现
+        /// </summary>
+        public Task<object> Hide<T>(params object[] args) where T : IBaseUI
+        {
+            return Hide<T>(null, args);
+        }
+        
+        /// <summary>
+        /// 隐藏UI（支持多实例）
+        /// </summary>
+        public Task<object> Hide<T>(string instanceId, params object[] args) where T : IBaseUI
+        {
+            var uiKey = new UIInstanceKey(typeof(T), instanceId);
+            return Hide(uiKey, args);
         }
 
         /// <summary>
-        /// 隐藏UI（通过Type）（修复Bug #4）
+        /// 隐藏UI（通过Type）
         /// </summary>
-        public async Task<object> Hide(Type uiType, params object[] args)
+        public Task<object> Hide(Type uiType, params object[] args)
         {
-            FrameworkLogger.Info($"[UICenter] 请求隐藏UI: {uiType.Name}");
+            return Hide(new UIInstanceKey(uiType, null), args);
+        }
+        
+        /// <summary>
+        /// 隐藏UI（通过Type和实例ID）
+        /// </summary>
+        public Task<object> Hide(Type uiType, string instanceId, params object[] args)
+        {
+            return Hide(new UIInstanceKey(uiType, instanceId), args);
+        }
 
-            if (!_uiStates.TryGetValue(uiType, out var uiState))
+        /// <summary>
+        /// 隐藏UI（通过UIInstanceKey）
+        /// </summary>
+        private async Task<object> Hide(UIInstanceKey uiKey, params object[] args)
+        {
+            FrameworkLogger.Info($"[UICenter] 请求隐藏UI: {uiKey}");
+
+            if (!_uiStates.TryGetValue(uiKey, out var uiState))
             {
-                FrameworkLogger.Warn($"[UICenter] UI不存在: {uiType.Name}");
+                FrameworkLogger.Warn($"[UICenter] UI不存在: {uiKey}");
                 return null;
             }
 
             if (uiState.Ui != null)
             {
-                return await HideAsync(uiState.Ui, args, uiState, uiType);
+                return await HideAsync(uiState.Ui, args, uiState, uiKey);
             }
 
-            FrameworkLogger.Warn($"[UICenter] UI实例为空: {uiType.Name}");
+            FrameworkLogger.Warn($"[UICenter] UI实例为空: {uiKey}");
             return null;
         }
 
         /// <summary>
         /// 执行隐藏操作
         /// </summary>
-        private async Task<object> HideAsync(IBaseUI ui, object[] args, UiState uiState, Type uiType)
+        private async Task<object> HideAsync(IBaseUI ui, object[] args, UiState uiState, UIInstanceKey uiKey)
         {
             try
             {
-                _stateManager.SetState(uiType, UIRuntimeState.Hidden);
+                _stateManager.SetState(uiKey.UIType, UIRuntimeState.Hidden);
                 
                 // 调用 OnHide
                 await ui.DoHide(args);
@@ -253,22 +343,22 @@ namespace Framework.Core
                 uiState.HideTcs?.TrySetResult(null);
                 
                 // 发送隐藏事件
-                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Hide, uiType.Name);
+                EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Hide, uiKey.ToString());
                 
-                FrameworkLogger.Info($"[UICenter] UI隐藏成功: {uiType.Name}");
+                FrameworkLogger.Info($"[UICenter] UI隐藏成功: {uiKey}");
                 
                 // 根据缓存策略决定是否销毁
-                var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
+                var config = UIProjectConfigManager.GetUIInstanceConfig(uiKey.UIType);
                 if (config?.CacheStrategy == UICacheStrategy.NeverCache)
                 {
-                    await DestroyUI(uiType);
+                    await DestroyUI(uiKey);
                 }
                 
                 return null;
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI隐藏失败: {uiType.Name}, {ex.Message}");
+                FrameworkLogger.Error($"[UICenter] UI隐藏失败: {uiKey}, {ex.Message}");
                 uiState.HideTcs?.TrySetException(ex);
                 throw;
             }
@@ -279,23 +369,32 @@ namespace Framework.Core
         #region 实例管理
         
         /// <summary>
-        /// 销毁指定UI
+        /// 销毁指定UI（单例或默认实例）
         /// </summary>
         public async Task DestroyUI<T>() where T : IBaseUI
         {
-            await DestroyUI(typeof(T));
+            await DestroyUI<T>(null);
+        }
+        
+        /// <summary>
+        /// 销毁指定UI（支持多实例）
+        /// </summary>
+        public async Task DestroyUI<T>(string instanceId) where T : IBaseUI
+        {
+            var uiKey = new UIInstanceKey(typeof(T), instanceId);
+            await DestroyUI(uiKey);
         }
         
         /// <summary>
         /// 销毁指定UI（内部方法）
         /// </summary>
-        private async Task DestroyUI(Type uiType)
+        private async Task DestroyUI(UIInstanceKey uiKey)
         {
-            FrameworkLogger.Info($"[UICenter] 请求销毁UI: {uiType.Name}");
+            FrameworkLogger.Info($"[UICenter] 请求销毁UI: {uiKey}");
             
-            if (!_uiStates.TryRemove(uiType, out var uiState))
+            if (!_uiStates.TryRemove(uiKey, out var uiState))
             {
-                FrameworkLogger.Warn($"[UICenter] UI不存在: {uiType.Name}");
+                FrameworkLogger.Warn($"[UICenter] UI不存在: {uiKey}");
                 return;
             }
             
@@ -303,25 +402,53 @@ namespace Framework.Core
             {
                 try
                 {
-                    _stateManager.SetState(uiType, UIRuntimeState.Destroying);
+                    _stateManager.SetState(uiKey.UIType, UIRuntimeState.Destroying);
                     
                     await uiState.Ui.DoDestroy();
                     
                     // 发送销毁事件
-                    EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Destroy, uiType.Name);
+                    EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Destroy, uiKey.ToString());
                     
                     // 从管理器中移除
-                    _instanceManager.RemoveInstance(uiType);
-                    _layerManager.ReleaseLayer(uiType);
-                    _stateManager.SetState(uiType, UIRuntimeState.Destroyed);
+                    _instanceManager.RemoveInstance(uiKey.UIType);
+                    _layerManager.ReleaseLayer(uiKey.UIType);
+                    _stateManager.SetState(uiKey.UIType, UIRuntimeState.Destroyed);
                     
-                    FrameworkLogger.Info($"[UICenter] UI销毁成功: {uiType.Name}");
+                    FrameworkLogger.Info($"[UICenter] UI销毁成功: {uiKey}");
                 }
                 catch (Exception ex)
                 {
-                    FrameworkLogger.Error($"[UICenter] UI销毁失败: {uiType.Name}, {ex.Message}");
+                    FrameworkLogger.Error($"[UICenter] UI销毁失败: {uiKey}, {ex.Message}");
                 }
             }
+        }
+        
+        /// <summary>
+        /// 销毁指定类型的所有实例
+        /// </summary>
+        public async Task DestroyAllInstancesOf<T>() where T : IBaseUI
+        {
+            var uiType = typeof(T);
+            FrameworkLogger.Info($"[UICenter] 销毁所有实例: {uiType.Name}");
+            
+            // 查找该类型的所有实例
+            var keysToDestroy = _uiStates.Keys.Where(key => key.UIType == uiType).ToList();
+            
+            if (keysToDestroy.Count == 0)
+            {
+                FrameworkLogger.Warn($"[UICenter] 没有找到任何实例: {uiType.Name}");
+                return;
+            }
+            
+            FrameworkLogger.Info($"[UICenter] 找到 {keysToDestroy.Count} 个实例，开始销毁");
+            
+            // 销毁所有实例
+            foreach (var key in keysToDestroy)
+            {
+                await DestroyUI(key);
+            }
+            
+            FrameworkLogger.Info($"[UICenter] {uiType.Name} 所有实例销毁完成");
         }
         
         /// <summary>
@@ -331,10 +458,10 @@ namespace Framework.Core
         {
             FrameworkLogger.Info($"[UICenter] 销毁所有UI，总数: {_uiStates.Count}");
             
-            var uiTypes = _uiStates.Keys.ToList();
-            foreach (var uiType in uiTypes)
+            var uiKeys = _uiStates.Keys.ToList();
+            foreach (var uiKey in uiKeys)
             {
-                await DestroyUI(uiType);
+                await DestroyUI(uiKey);
             }
             
             // 清空管理器
@@ -342,24 +469,65 @@ namespace Framework.Core
             _layerManager.Clear();
             _stateManager.Clear();
             _stackManager.Clear();
+            _autoInstanceCounters.Clear();
         }
         
         /// <summary>
-        /// 获取UI实例
+        /// 获取UI实例（单例或第一个实例）
         /// </summary>
         public T GetUI<T>() where T : IBaseUI
         {
             var uiType = typeof(T);
-            var instance = _instanceManager.GetInstance(uiType);
-            return instance is T ? (T)instance : default;
+            
+            // 尝试获取单例实例
+            var singletonKey = new UIInstanceKey(uiType, null);
+            if (_uiStates.TryGetValue(singletonKey, out var state) && state.Ui is T)
+            {
+                return (T)state.Ui;
+            }
+            
+            // 如果不是单例，返回第一个找到的实例
+            var firstInstance = _uiStates.Keys
+                .Where(k => k.UIType == uiType)
+                .Select(k => _uiStates.TryGetValue(k, out var s) ? s.Ui : null)
+                .FirstOrDefault(ui => ui is T);
+            
+            return firstInstance is T ? (T)firstInstance : default;
         }
         
         /// <summary>
-        /// 检查UI是否正在显示
+        /// 获取UI实例（支持多实例）
+        /// </summary>
+        public T GetUI<T>(string instanceId) where T : IBaseUI
+        {
+            var uiKey = new UIInstanceKey(typeof(T), instanceId);
+            if (_uiStates.TryGetValue(uiKey, out var state))
+            {
+                return state.Ui is T ? (T)state.Ui : default;
+            }
+            return default;
+        }
+        
+        /// <summary>
+        /// 检查UI是否正在显示（单例或是否有任何实例显示）
         /// </summary>
         public bool IsShowing<T>() where T : IBaseUI
         {
-            return _stateManager.IsShowing(typeof(T));
+            var uiType = typeof(T);
+            
+            // 检查是否有任何该类型的实例在显示
+            return _uiStates.Keys
+                .Where(k => k.UIType == uiType)
+                .Any(k => _stateManager.IsShowing(k.UIType));
+        }
+        
+        /// <summary>
+        /// 检查UI实例是否正在显示（支持多实例）
+        /// </summary>
+        public bool IsShowing<T>(string instanceId) where T : IBaseUI
+        {
+            var uiKey = new UIInstanceKey(typeof(T), instanceId);
+            return _uiStates.ContainsKey(uiKey) && _stateManager.IsShowing(uiKey.UIType);
         }
         
         /// <summary>
@@ -452,42 +620,41 @@ namespace Framework.Core
         
         /// <summary>
         /// 预加载UI
+        /// 注意：只加载Prefab资源到内存，不实例化GameObject，不执行业务逻辑
+        /// 适用于单例和多实例UI
         /// </summary>
         public async Task PreloadUI<T>() where T : IBaseUI
         {
-            var uiType = typeof(T);
-            FrameworkLogger.Info($"[UICenter] 预加载UI: {uiType.Name}");
+            await Task.CompletedTask; // 保持异步签名
             
-            // 如果已经有实例，跳过
-            if (_instanceManager.HasInstance(uiType))
+            var uiType = typeof(T);
+            var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
+            
+            if (config == null || string.IsNullOrEmpty(config.ResourcePath))
             {
-                FrameworkLogger.Info($"[UICenter] UI已存在，跳过预加载: {uiType.Name}");
+                FrameworkLogger.Warn($"[UICenter] 预加载失败：未找到UI配置或资源路径: {uiType.Name}");
                 return;
             }
             
-            // 创建UI实例但不显示
-            var uiState = _uiStates.GetOrAdd(uiType, _ => new UiState());
-            uiState.CreateTcs = new TaskCompletionSource<object>();
-            
-            var ui = _container.Resolve<PlaceholderFactory<Type, IBaseUI>>().Create(typeof(T));
-            ui.Initialize();
-            uiState.Ui = ui;
-            
-            _instanceManager.AddInstance(uiType, ui);
-            
             try
             {
-                _stateManager.SetState(uiType, UIRuntimeState.Creating);
-                await ui.DoCreate();
-                _stateManager.SetState(uiType, UIRuntimeState.Hidden);
-                uiState.CreateTcs.TrySetResult(null);
+                FrameworkLogger.Info($"[UICenter] 预加载UI资源: {uiType.Name} <- {config.ResourcePath}");
                 
-                FrameworkLogger.Info($"[UICenter] UI预加载完成: {uiType.Name}");
+                // 使用框架的资源系统加载Prefab（不实例化）
+                var prefab = await _resource.LoadAsync<GameObject>(config.ResourcePath);
+                
+                if (prefab == null)
+                {
+                    FrameworkLogger.Error($"[UICenter] 预加载失败：无法加载Prefab: {config.ResourcePath}");
+                    return;
+                }
+                
+                FrameworkLogger.Info($"[UICenter] UI资源预加载完成: {uiType.Name}");
+                FrameworkLogger.Info($"[UICenter] Prefab已缓存到框架资源系统，后续实例化时将直接使用");
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI预加载失败: {uiType.Name}, {ex.Message}");
-                uiState.CreateTcs.TrySetException(ex);
+                FrameworkLogger.Error($"[UICenter] UI资源预加载失败: {uiType.Name}, {ex.Message}");
                 throw;
             }
         }
@@ -572,15 +739,58 @@ namespace Framework.Core
         }
         
         /// <summary>
+        /// 将UI置顶（刷新层级）
+        /// </summary>
+        private void BringUIToFront(UIBehaviour ui)
+        {
+            var layerName = ui.LayerName ?? "Main";
+            var baseSortingOrder = UIProjectConfigManager.GetBaseSortingOrder(layerName);
+            
+            // 获取该层级当前的计数器
+            if (!_layerCounters.TryGetValue(layerName, out var counter))
+            {
+                counter = 0;
+            }
+            
+            // 使用最新的sortingOrder置顶
+            var finalSortingOrder = baseSortingOrder + counter;
+            ui.SetIndex(finalSortingOrder);
+            
+            // 递增计数器
+            _layerCounters[layerName] = counter + 1;
+            
+            FrameworkLogger.Info($"[UICenter] 刷新UI层级（置顶）: {ui.GetType().Name}, Layer={layerName}, FinalSortingOrder={finalSortingOrder}");
+        }
+        
+        /// <summary>
+        /// 生成自动实例ID
+        /// </summary>
+        private string GenerateAutoInstanceId(Type uiType)
+        {
+            if (!_autoInstanceCounters.TryGetValue(uiType, out var counter))
+            {
+                counter = 0;
+            }
+            
+            counter++;
+            _autoInstanceCounters[uiType] = counter;
+            
+            var instanceId = $"{AUTO_INSTANCE_PREFIX}{counter}";
+            FrameworkLogger.Info($"[UICenter] 生成自动实例ID: {uiType.Name} -> {instanceId}");
+            
+            return instanceId;
+        }
+        
+        /// <summary>
         /// 移除UI
         /// </summary>
-        private void RemoveUi(Type uiKey, Exception exception = null)
+        private void RemoveUi(UIInstanceKey uiKey, Exception exception = null)
         {
             if (!_uiStates.TryRemove(uiKey, out var uiState)) return;
 
             if (uiState.Ui is IDisposable disposable)
             {
-                FrameworkLogger.Info($"[UICenter] 释放UI资源: {uiKey.Name}");
+                FrameworkLogger.Info($"[UICenter] 释放UI资源: {uiKey}");
                 disposable.Dispose();
             }
 
@@ -595,7 +805,7 @@ namespace Framework.Core
 
                 if (exception != null)
                 {
-                    FrameworkLogger.Error($"[UICenter] UI操作异常: {uiKey.Name}, {exception.Message}");
+                    FrameworkLogger.Error($"[UICenter] UI操作异常: {uiKey}, {exception.Message}");
                     tcs.TrySetException(exception);
                 }
                 else
@@ -605,9 +815,9 @@ namespace Framework.Core
             }
             
             // 从管理器中移除
-            _instanceManager.RemoveInstance(uiKey);
-            _layerManager.ReleaseLayer(uiKey);
-            _stateManager.RemoveState(uiKey);
+            _instanceManager.RemoveInstance(uiKey.UIType);
+            _layerManager.ReleaseLayer(uiKey.UIType);
+            _stateManager.RemoveState(uiKey.UIType);
         }
         
         #endregion

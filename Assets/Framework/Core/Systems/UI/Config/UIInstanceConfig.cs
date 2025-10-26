@@ -45,6 +45,12 @@ namespace Framework.Core
         /// </summary>
         [Tooltip("是否在UI下方显示遮罩")]
         public bool UseMask = false;
+        
+        /// <summary>
+        /// 实例策略
+        /// </summary>
+        [Tooltip("UI实例策略：单例或多实例")]
+        public UIInstanceStrategy InstanceStrategy = UIInstanceStrategy.Singleton;
 
         /// <summary>
         /// 克隆配置
@@ -58,9 +64,26 @@ namespace Framework.Core
                 LayerName = this.LayerName,
                 CacheStrategy = this.CacheStrategy,
                 Preload = this.Preload,
-                UseMask = this.UseMask
+                UseMask = this.UseMask,
+                InstanceStrategy = this.InstanceStrategy
             };
         }
+    }
+    
+    /// <summary>
+    /// UI实例策略
+    /// </summary>
+    public enum UIInstanceStrategy
+    {
+        /// <summary>
+        /// 单例模式：同一时间只能存在一个实例
+        /// </summary>
+        Singleton = 0,
+        
+        /// <summary>
+        /// 多实例模式：可以同时存在多个实例
+        /// </summary>
+        Multiple = 1
     }
 }
 

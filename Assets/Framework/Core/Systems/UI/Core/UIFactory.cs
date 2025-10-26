@@ -12,10 +12,12 @@ namespace Framework.Core
     public class UIFactory : IFactory<Type, IBaseUI>
     {
         private readonly DiContainer _container;
+        private readonly IResource _resource;
         
-        public UIFactory(DiContainer container)
+        public UIFactory(DiContainer container, IResource resource)
         {
             _container = container;
+            _resource = resource;
         }
         
         public IBaseUI Create(Type uiType)
@@ -40,8 +42,8 @@ namespace Framework.Core
         {
             try
             {
-                // 加载Prefab
-                var prefab = Resources.Load<GameObject>(resourcePath);
+                // 使用框架的资源系统加载Prefab
+                var prefab = _resource.Load<GameObject>(resourcePath);
                 if (prefab == null)
                 {
                     throw new Exception($"无法加载UI Prefab: {resourcePath}");
