@@ -26,8 +26,15 @@ namespace Framework.Core
 
         public readonly ActionUiAttachment Action = new ActionUiAttachment();
 
-        public UIAlignType AlignType = UIAlignType.Center;
-        public UIType UIType = UIType.Main;
+        /// <summary>
+        /// UI对齐类型（实现IBaseUI接口）
+        /// </summary>
+        public UIAlignType AlignType { get; set; } = UIAlignType.Center;
+        
+        /// <summary>
+        /// UI类型（实现IBaseUI接口）
+        /// </summary>
+        public UIType UIType { get; set; } = UIType.Main;
 
         public object[] GetParams(UIState state)
         {
