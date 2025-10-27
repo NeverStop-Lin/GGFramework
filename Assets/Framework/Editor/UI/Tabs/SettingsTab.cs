@@ -65,76 +65,159 @@ namespace Framework.Editor.UI
             
             EditorGUILayout.BeginVertical("box");
             
-            // 当前配置（支持拖拽替换）
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("当前配置:", GUILayout.Width(100));
+            bool configExists = UIProjectConfigEditorHelper.ConfigCodeFileExists();
+            var configPath = UIProjectConfigEditorHelper.GetConfigCodeFilePath();
             
-            var newConfig = (UIProjectConfig)EditorGUILayout.ObjectField(
-                _currentConfig, 
-                typeof(UIProjectConfig), 
-                false
-            );
-            
-            if (newConfig != _currentConfig && newConfig != null)
+            if (configExists)
             {
-                // 验证必须在Resources文件夹中
-                var newPath = AssetDatabase.GetAssetPath(newConfig);
-                if (!newPath.Contains("/Resources/"))
+                // 配置文件存在 - 显示路径和操作
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("配置文件:", GUILayout.Width(120));
+                EditorGUILayout.SelectableLabel(configPath, EditorStyles.miniLabel, GUILayout.Height(16));
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("命名空间:", GUILayout.Width(120));
+                EditorGUILayout.LabelField("Framework.Core (固定)", EditorStyles.miniLabel);
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Space(5);
+                
+                // 操作按钮
+                EditorGUILayout.BeginHorizontal();
+                
+                if (GUILayout.Button("打开文件", GUILayout.Width(100)))
                 {
-                    EditorUtility.DisplayDialog(
-                        "路径错误",
-                        "UIProjectConfig 必须放在 Resources 文件夹中！",
-                        "确定"
-                    );
-                }
-                else
-                {
-                    // 更新配置
-                    _currentConfig = newConfig;
-                    
-                    // 更新路径
-                    var resourcesIndex = newPath.IndexOf("Resources/");
-                    if (resourcesIndex >= 0)
+                    var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(configPath);
+                    if (asset != null)
                     {
-                        var configPath = newPath.Substring(resourcesIndex + "Resources/".Length);
-                        if (configPath.EndsWith(".asset"))
-                        {
-                            configPath = configPath.Substring(0, configPath.Length - 6);
-                        }
-                        
-                        _settings.ConfigPath = configPath;
-                        _settings.Save();
-                        UIProjectConfigManager.SetConfigPath(configPath);
-                        UIProjectConfigManager.Reload();
-                        
-                        // 刷新所有Tab
-                        if (_parentWindow != null)
-                        {
-                            _parentWindow.RequestRefresh();
-                        }
+                        UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(configPath, 1);
                     }
                 }
-            }
-            
-            EditorGUILayout.EndHorizontal();
-            
-            // 显示路径
-            if (_currentConfig != null)
-            {
-                var currentPath = AssetDatabase.GetAssetPath(_currentConfig);
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("路径:", GUILayout.Width(100));
-                EditorGUILayout.SelectableLabel(currentPath, EditorStyles.miniLabel, GUILayout.Height(16));
+                
+                if (GUILayout.Button("重新选择", GUILayout.Width(100)))
+                {
+                    SelectConfigCodeFile();
+                }
+                
                 EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.HelpBox(
+                    "配置数据以代码形式存储（命名空间固定为 Framework.Core）\n" +
+                    "修改配置后点击【保存设置】会自动重新生成代码",
+                    MessageType.Info
+                );
             }
-            
-            EditorGUILayout.HelpBox(
-                "💡 拖拽 UIProjectConfig 配置文件到上方输入框即可切换配置\n" +
-                "注意：配置文件必须在 Resources 文件夹中",
-                MessageType.Info
-            );
+            else
+            {
+                // 配置文件不存在 - 显示创建按钮
+                EditorGUILayout.HelpBox(
+                    "UI 项目配置文件不存在\n" +
+                    "点击下方按钮创建配置文件",
+                    MessageType.Warning
+                );
+                
+                EditorGUILayout.Space(5);
+                
+                if (GUILayout.Button("创建配置文件", GUILayout.Height(35)))
+                {
+                    CreateConfigCodeFile();
+                }
+            }
             
             EditorGUILayout.EndVertical();
+        }
+        
+        /// <summary>
+        /// 创建配置代码文件
+        /// </summary>
+        private void CreateConfigCodeFile()
+        {
+            // 让用户选择保存位置
+            var defaultPath = "Assets/Game/Scripts/Generated/UIProjectConfigData.cs";
+            var savePath = EditorUtility.SaveFilePanel(
+                "创建 UI 项目配置文件",
+                System.IO.Path.GetDirectoryName(defaultPath),
+                "UIProjectConfigData.cs",
+                "cs"
+            );
+            
+            if (string.IsNullOrEmpty(savePath))
+                return;
+            
+            // 转换为相对路径
+            if (!savePath.StartsWith(UnityEngine.Application.dataPath))
+            {
+                EditorUtility.DisplayDialog("路径错误", "配置文件必须在 Assets 目录下", "确定");
+                return;
+            }
+            
+            var relativePath = "Assets" + savePath.Substring(UnityEngine.Application.dataPath.Length);
+            
+            // 创建配置文件
+            UIProjectConfigEditorHelper.CreateConfigCodeFile(relativePath);
+            
+            // 刷新
+            AssetDatabase.Refresh();
+            
+            // 重新加载配置
+            LoadConfig();
+            
+            EditorUtility.DisplayDialog("成功", $"配置文件已创建:\n{relativePath}", "确定");
+        }
+        
+        /// <summary>
+        /// 重新选择配置代码文件
+        /// </summary>
+        private void SelectConfigCodeFile()
+        {
+            var currentPath = UIProjectConfigEditorHelper.GetConfigCodeFilePath();
+            var defaultDir = string.IsNullOrEmpty(currentPath) 
+                ? "Assets/Game/Scripts/Generated" 
+                : System.IO.Path.GetDirectoryName(currentPath);
+            
+            var selectedPath = EditorUtility.OpenFilePanel(
+                "选择 UI 项目配置文件",
+                defaultDir,
+                "cs"
+            );
+            
+            if (string.IsNullOrEmpty(selectedPath))
+                return;
+            
+            // 转换为相对路径
+            if (!selectedPath.StartsWith(UnityEngine.Application.dataPath))
+            {
+                EditorUtility.DisplayDialog("路径错误", "配置文件必须在 Assets 目录下", "确定");
+                return;
+            }
+            
+            var relativePath = "Assets" + selectedPath.Substring(UnityEngine.Application.dataPath.Length);
+            
+            // 验证文件名
+            if (!System.IO.Path.GetFileName(relativePath).Contains("UIProjectConfigData"))
+            {
+                var confirm = EditorUtility.DisplayDialog(
+                    "文件名不匹配",
+                    $"选择的文件名不包含 'UIProjectConfigData'\n" +
+                    $"确定要使用这个文件吗？\n\n{relativePath}",
+                    "确定",
+                    "取消"
+                );
+                
+                if (!confirm)
+                    return;
+            }
+            
+            // 更新设置
+            _settings.ConfigCodeFilePath = relativePath;
+            _settings.Save();
+            
+            // 重新加载
+            UIProjectConfigManager.Reload();
+            LoadConfig();
+            
+            EditorUtility.DisplayDialog("成功", $"已切换到:\n{relativePath}", "确定");
         }
         
         private void DrawCanvasSettingsSection()
@@ -175,7 +258,6 @@ namespace Framework.Editor.UI
                     _currentConfig.ReferenceResolutionWidth = width;
                     _currentConfig.ReferenceResolutionHeight = height;
                     _currentConfig.MatchWidthOrHeight = match;
-                    EditorUtility.SetDirty(_currentConfig);
                 }
                 
                 EditorGUILayout.Space(5);
@@ -191,7 +273,6 @@ namespace Framework.Editor.UI
                 if (GUILayout.Button("横屏", GUILayout.Width(80)))
                 {
                     _currentConfig.MatchWidthOrHeight = 1f; // 高度优先
-                    EditorUtility.SetDirty(_currentConfig);
                 }
                 
                 // 竖屏按钮（宽度优先）
@@ -199,7 +280,6 @@ namespace Framework.Editor.UI
                 if (GUILayout.Button("竖屏", GUILayout.Width(80)))
                 {
                     _currentConfig.MatchWidthOrHeight = 0f; // 宽度优先
-                    EditorUtility.SetDirty(_currentConfig);
                 }
                 
                 // 自定义按钮（平衡）
@@ -207,7 +287,6 @@ namespace Framework.Editor.UI
                 if (GUILayout.Button("自定义", GUILayout.Width(80)))
                 {
                     _currentConfig.MatchWidthOrHeight = 0.5f; // 平衡
-                    EditorUtility.SetDirty(_currentConfig);
                 }
                 
                 GUI.backgroundColor = oldColor;
@@ -222,21 +301,18 @@ namespace Framework.Editor.UI
                 {
                     _currentConfig.ReferenceResolutionWidth = 1920;
                     _currentConfig.ReferenceResolutionHeight = 1080;
-                    EditorUtility.SetDirty(_currentConfig);
                 }
                 
                 if (GUILayout.Button("1280x720", GUILayout.Width(100)))
                 {
                     _currentConfig.ReferenceResolutionWidth = 1280;
                     _currentConfig.ReferenceResolutionHeight = 720;
-                    EditorUtility.SetDirty(_currentConfig);
                 }
                 
                 if (GUILayout.Button("750x1334", GUILayout.Width(100)))
                 {
                     _currentConfig.ReferenceResolutionWidth = 750;
                     _currentConfig.ReferenceResolutionHeight = 1334;
-                    EditorUtility.SetDirty(_currentConfig);
                 }
                 
                 EditorGUILayout.EndHorizontal();
@@ -325,7 +401,7 @@ namespace Framework.Editor.UI
         private void LoadConfig()
         {
             // 获取配置（不需要每次都Reload，只在必要时重新加载）
-            _currentConfig = UIProjectConfigManager.GetConfig();
+            _currentConfig = UIProjectConfigEditorHelper.GetConfig();
         }
         
         
@@ -336,7 +412,16 @@ namespace Framework.Editor.UI
             _settings.BindingScriptOutputPath = _bindingOutputPath;
             _settings.Save();
             
-            EditorUtility.DisplayDialog("成功", "设置已保存", "确定");
+            // 保存配置数据（触发代码生成）
+            if (_currentConfig != null)
+            {
+                UIProjectConfigEditorHelper.SaveConfig(_currentConfig);
+                EditorUtility.DisplayDialog("成功", "设置和配置已保存并生成代码", "确定");
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("成功", "设置已保存", "确定");
+            }
         }
         
         public string GetDefaultNamespace()

@@ -9,6 +9,17 @@ namespace Framework.Scripts
     /// </summary>
     public partial class Launcher : BaseLauncher
     {
-        protected override void FrameworkInitialize() { }
+        protected override void FrameworkInitialize()
+        {
+
+            // 初始化框架
+        }
+
+        // 在此添加业务初始化逻辑
+        // protected override void BusinessInitialize()
+        // {
+        //     
+        // }
     }
+
 }

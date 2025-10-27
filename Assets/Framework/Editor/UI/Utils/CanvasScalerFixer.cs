@@ -26,7 +26,7 @@ namespace Framework.Editor.UI
             }
             
             // 获取项目配置
-            var config = UIProjectConfigManager.GetConfig();
+            var config = UIProjectConfigEditorHelper.GetConfig();
             if (config == null)
             {
                 errorMessage = "未找到UI项目配置";
@@ -88,7 +88,7 @@ namespace Framework.Editor.UI
             }
             
             // 获取项目配置
-            var config = UIProjectConfigManager.GetConfig();
+            var config = UIProjectConfigEditorHelper.GetConfig();
             if (config == null)
             {
                 Debug.LogError("[CanvasScalerFixer] 未找到UI项目配置");

@@ -47,7 +47,7 @@ namespace Framework.Editor.UI
         private void LoadConfig()
         {
             // 获取配置（不需要每次都Reload，只在必要时重新加载）
-            _config = UIProjectConfigManager.GetConfig();
+            _config = UIProjectConfigEditorHelper.GetConfig();
             
             if (_config != null)
             {
@@ -197,8 +197,8 @@ namespace Framework.Editor.UI
             _newBaseSortingOrder = 0;
             _newDescription = "";
             
-            EditorUtility.SetDirty(_config);
-            AssetDatabase.SaveAssets();
+            // 保存配置（触发代码生成）
+            SaveChanges();
         }
         
         private void SaveChanges()
@@ -218,10 +218,10 @@ namespace Framework.Editor.UI
                 _config.AddOrUpdateLayer(layer);
             }
             
-            EditorUtility.SetDirty(_config);
-            AssetDatabase.SaveAssets();
+            // 保存配置（触发代码生成）
+            UIProjectConfigEditorHelper.SaveConfig(_config);
             
-            EditorUtility.DisplayDialog("成功", "层级配置已保存", "确定");
+            EditorUtility.DisplayDialog("成功", "层级配置已保存并生成代码", "确定");
         }
     }
 }

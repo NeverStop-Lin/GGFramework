@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 
 namespace Framework.Core
 {
@@ -9,68 +8,33 @@ namespace Framework.Core
     /// UI项目配置
     /// 统一管理项目中的UI层级定义和UI实例配置
     /// </summary>
-    [CreateAssetMenu(fileName = "UIProjectConfig", menuName = "Framework/UI/UI Project Config")]
-    public class UIProjectConfig : ScriptableObject
+    [Serializable]
+    public class UIProjectConfig
     {
-        [Header("Canvas设计尺寸")]
-        [SerializeField]
-        [Tooltip("Canvas参考分辨率宽度")]
-        private int _referenceResolutionWidth = 1280;
-        
-        [SerializeField]
-        [Tooltip("Canvas参考分辨率高度")]
-        private int _referenceResolutionHeight = 720;
-        
-        [SerializeField]
-        [Tooltip("屏幕匹配模式（0=宽度，0.5=平衡，1=高度）")]
-        [Range(0f, 1f)]
-        private float _matchWidthOrHeight = 1f;
-        
-        [Header("UI层级配置")]
-        [SerializeField]
-        [Tooltip("UI层级定义列表")]
-        private List<UILayerDefinition> _layerDefinitions = new List<UILayerDefinition>();
-        
-        [SerializeField]
-        [Tooltip("UI实例配置列表")]
-        private List<UIInstanceConfig> _uiConfigs = new List<UIInstanceConfig>();
-        
         /// <summary>
         /// Canvas参考分辨率宽度
         /// </summary>
-        public int ReferenceResolutionWidth 
-        { 
-            get => _referenceResolutionWidth; 
-            set => _referenceResolutionWidth = value; 
-        }
+        public int ReferenceResolutionWidth { get; set; } = 1280;
         
         /// <summary>
         /// Canvas参考分辨率高度
         /// </summary>
-        public int ReferenceResolutionHeight 
-        { 
-            get => _referenceResolutionHeight; 
-            set => _referenceResolutionHeight = value; 
-        }
+        public int ReferenceResolutionHeight { get; set; } = 720;
         
         /// <summary>
         /// 屏幕匹配模式
         /// </summary>
-        public float MatchWidthOrHeight 
-        { 
-            get => _matchWidthOrHeight; 
-            set => _matchWidthOrHeight = value; 
-        }
+        public float MatchWidthOrHeight { get; set; } = 1f;
         
         /// <summary>
         /// 层级定义列表
         /// </summary>
-        public List<UILayerDefinition> LayerDefinitions => _layerDefinitions;
+        public List<UILayerDefinition> LayerDefinitions { get; set; } = new List<UILayerDefinition>();
         
         /// <summary>
         /// UI实例配置列表
         /// </summary>
-        public List<UIInstanceConfig> UIConfigs => _uiConfigs;
+        public List<UIInstanceConfig> UIConfigs { get; set; } = new List<UIInstanceConfig>();
         
         #region 层级管理
         
@@ -79,7 +43,7 @@ namespace Framework.Core
         /// </summary>
         public UILayerDefinition GetLayerDefinition(string layerName)
         {
-            return _layerDefinitions.FirstOrDefault(l => l.LayerName == layerName);
+            return LayerDefinitions.FirstOrDefault(l => l.LayerName == layerName);
         }
         
         /// <summary>
@@ -96,7 +60,7 @@ namespace Framework.Core
         /// </summary>
         public void AddOrUpdateLayer(UILayerDefinition layerDef)
         {
-            var existing = _layerDefinitions.FirstOrDefault(l => l.LayerName == layerDef.LayerName);
+            var existing = LayerDefinitions.FirstOrDefault(l => l.LayerName == layerDef.LayerName);
             if (existing != null)
             {
                 existing.BaseSortingOrder = layerDef.BaseSortingOrder;
@@ -104,14 +68,10 @@ namespace Framework.Core
             }
             else
             {
-                _layerDefinitions.Add(layerDef.Clone());
+                LayerDefinitions.Add(layerDef.Clone());
             }
             
             SortLayers();
-            
-#if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(this);
-#endif
         }
         
         /// <summary>
@@ -119,11 +79,7 @@ namespace Framework.Core
         /// </summary>
         public void RemoveLayer(string layerName)
         {
-            _layerDefinitions.RemoveAll(l => l.LayerName == layerName);
-            
-#if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(this);
-#endif
+            LayerDefinitions.RemoveAll(l => l.LayerName == layerName);
         }
         
         /// <summary>
@@ -131,7 +87,7 @@ namespace Framework.Core
         /// </summary>
         public bool HasLayer(string layerName)
         {
-            return _layerDefinitions.Any(l => l.LayerName == layerName);
+            return LayerDefinitions.Any(l => l.LayerName == layerName);
         }
         
         /// <summary>
@@ -139,7 +95,7 @@ namespace Framework.Core
         /// </summary>
         private void SortLayers()
         {
-            _layerDefinitions.Sort((a, b) => a.BaseSortingOrder.CompareTo(b.BaseSortingOrder));
+            LayerDefinitions.Sort((a, b) => a.BaseSortingOrder.CompareTo(b.BaseSortingOrder));
         }
         
         #endregion
@@ -151,7 +107,7 @@ namespace Framework.Core
         /// </summary>
         public UIInstanceConfig GetUIConfig(string uiName)
         {
-            return _uiConfigs.FirstOrDefault(c => c.UIName == uiName);
+            return UIConfigs.FirstOrDefault(c => c.UIName == uiName);
         }
         
         /// <summary>
@@ -167,10 +123,9 @@ namespace Framework.Core
         /// </summary>
         public void AddOrUpdateUIConfig(UIInstanceConfig config)
         {
-            var existing = _uiConfigs.FirstOrDefault(c => c.UIName == config.UIName);
+            var existing = UIConfigs.FirstOrDefault(c => c.UIName == config.UIName);
             if (existing != null)
             {
-                
                 existing.ResourcePath = config.ResourcePath;
                 existing.LayerName = config.LayerName;
                 existing.CacheStrategy = config.CacheStrategy;
@@ -179,12 +134,8 @@ namespace Framework.Core
             }
             else
             {
-                _uiConfigs.Add(config.Clone());
+                UIConfigs.Add(config.Clone());
             }
-            
-#if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(this);
-#endif
         }
         
         /// <summary>
@@ -192,11 +143,7 @@ namespace Framework.Core
         /// </summary>
         public void RemoveUIConfig(string uiName)
         {
-            _uiConfigs.RemoveAll(c => c.UIName == uiName);
-            
-#if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(this);
-#endif
+            UIConfigs.RemoveAll(c => c.UIName == uiName);
         }
         
         /// <summary>
@@ -204,7 +151,7 @@ namespace Framework.Core
         /// </summary>
         public List<UIInstanceConfig> GetPreloadUIConfigs()
         {
-            return _uiConfigs.Where(c => c.Preload).ToList();
+            return UIConfigs.Where(c => c.Preload).ToList();
         }
         
         /// <summary>
@@ -212,7 +159,7 @@ namespace Framework.Core
         /// </summary>
         public List<UIInstanceConfig> GetUIConfigsByLayer(string layerName)
         {
-            return _uiConfigs.Where(c => c.LayerName == layerName).ToList();
+            return UIConfigs.Where(c => c.LayerName == layerName).ToList();
         }
         
         #endregion
@@ -224,35 +171,31 @@ namespace Framework.Core
         /// </summary>
         public void CreateDefaultLayers()
         {
-            if (_layerDefinitions.Count > 0)
+            if (LayerDefinitions.Count > 0)
             {
                 return;
             }
             
-            _layerDefinitions.Add(new UILayerDefinition
+            LayerDefinitions.Add(new UILayerDefinition
             {
                 LayerName = "Main",
                 BaseSortingOrder = 0,
                 Description = "主界面层级，用于全屏UI"
             });
             
-            _layerDefinitions.Add(new UILayerDefinition
+            LayerDefinitions.Add(new UILayerDefinition
             {
                 LayerName = "Popup",
                 BaseSortingOrder = 1000,
                 Description = "弹窗层级，用于弹出式UI"
             });
             
-            _layerDefinitions.Add(new UILayerDefinition
+            LayerDefinitions.Add(new UILayerDefinition
             {
                 LayerName = "Top",
                 BaseSortingOrder = 2000,
                 Description = "顶层层级，用于始终显示在最上层的UI"
             });
-            
-#if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(this);
-#endif
         }
         
         #endregion

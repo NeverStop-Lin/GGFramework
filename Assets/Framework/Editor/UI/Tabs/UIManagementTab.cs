@@ -62,7 +62,7 @@ namespace Framework.Editor.UI
         
         private void LoadConfig()
         {
-            _config = UIProjectConfigManager.GetConfig();
+            _config = UIProjectConfigEditorHelper.GetConfig();
         }
         
         private void LoadSettings()
@@ -734,8 +734,9 @@ namespace Framework.Editor.UI
             };
             
             _config.AddOrUpdateUIConfig(uiConfig);
-            EditorUtility.SetDirty(_config);
-            AssetDatabase.SaveAssets();
+            
+            // 保存配置（触发代码生成）
+            UIProjectConfigEditorHelper.SaveConfig(_config);
         }
         
         /// <summary>
@@ -783,8 +784,9 @@ namespace Framework.Editor.UI
                 if (info.ConfigExists)
                 {
                     _config.RemoveUIConfig(info.UIName);
-                    EditorUtility.SetDirty(_config);
-                    AssetDatabase.SaveAssets();
+                    
+                    // 保存配置（触发代码生成）
+                    UIProjectConfigEditorHelper.SaveConfig(_config);
                 }
                 
                 // 刷新列表
@@ -890,8 +892,9 @@ namespace Framework.Editor.UI
                 }
             }
             
-            EditorUtility.SetDirty(_config);
-            AssetDatabase.SaveAssets();
+            // 保存配置（触发代码生成）
+            UIProjectConfigEditorHelper.SaveConfig(_config);
+            
             AssetDatabase.Refresh();
             
             // 刷新列表

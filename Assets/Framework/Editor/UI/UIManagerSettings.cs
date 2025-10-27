@@ -10,11 +10,11 @@ namespace Framework.Editor.UI
     [CreateAssetMenu(fileName = "UIManagerSettings", menuName = "Framework/UI/UI Manager Settings")]
     public class UIManagerSettings : ScriptableObject
     {
-        [Header("配置文件")]
-        [Tooltip("UIProjectConfig配置文件的路径（相对于Resources文件夹）")]
-        public string ConfigPath = "Framework/Configs/UIProjectConfig";
+        [Header("UI配置代码")]
+        [Tooltip("UI项目配置代码文件路径")]
+        public string ConfigCodeFilePath = "Assets/Game/Scripts/Generated/UIProjectConfigData.cs";
         
-        [Header("代码生成")]
+        [Header("UI代码生成")]
         [Tooltip("生成UI代码的默认命名空间")]
         public string DefaultNamespace = "Game.UI";
         

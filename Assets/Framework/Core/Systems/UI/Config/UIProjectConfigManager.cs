@@ -1,36 +1,56 @@
 using System;
-using UnityEngine;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Framework.Core
 {
     /// <summary>
     /// UI项目配置管理器
-    /// 负责加载和访问UIProjectConfig配置
+    /// 从生成的代码中读取UI配置数据
     /// </summary>
     public static class UIProjectConfigManager
     {
-        private static UIProjectConfig _config;
-        private static string _configPath = "Framework/Configs/UIProjectConfig";
+        private static bool _initialized = false;
+        private static List<UILayerDefinition> _layerDefinitions;
+        private static List<UIInstanceConfig> _uiConfigs;
+        private static Dictionary<string, UIInstanceConfig> _uiConfigCache;
         
         /// <summary>
-        /// 获取UI项目配置
+        /// 初始化配置数据（懒加载）
         /// </summary>
-        public static UIProjectConfig GetConfig()
+        private static void Initialize()
         {
-            if (_config == null)
-            {
-                _config = Resources.Load<UIProjectConfig>(_configPath);
+            if (_initialized)
+                return;
                 
-#if UNITY_EDITOR
-                if (_config == null)
-                {
-                    FrameworkLogger.Warn($"[UIProjectConfig] 未找到UI项目配置文件，路径: Resources/{_configPath}");
-                    FrameworkLogger.Warn($"[UIProjectConfig] 请通过 Tools/Framework/UI Manager 创建配置文件");
-                }
-#endif
-            }
-            
-            return _config;
+            _layerDefinitions = UIProjectConfigData.GetLayerDefinitions();
+            _uiConfigs = UIProjectConfigData.GetUIConfigs();
+            _uiConfigCache = _uiConfigs.ToDictionary(c => c.UIName);
+            _initialized = true;
+        }
+        
+        /// <summary>
+        /// 获取Canvas参考分辨率宽度
+        /// </summary>
+        public static int GetReferenceResolutionWidth()
+        {
+            return UIProjectConfigData.ReferenceResolutionWidth;
+        }
+        
+        /// <summary>
+        /// 获取Canvas参考分辨率高度
+        /// </summary>
+        public static int GetReferenceResolutionHeight()
+        {
+            return UIProjectConfigData.ReferenceResolutionHeight;
+        }
+        
+        /// <summary>
+        /// 获取屏幕匹配模式
+        /// </summary>
+        public static float GetMatchWidthOrHeight()
+        {
+            return UIProjectConfigData.MatchWidthOrHeight;
         }
         
         /// <summary>
@@ -38,8 +58,8 @@ namespace Framework.Core
         /// </summary>
         public static UILayerDefinition GetLayerDefinition(string layerName)
         {
-            var config = GetConfig();
-            return config?.GetLayerDefinition(layerName);
+            Initialize();
+            return _layerDefinitions.FirstOrDefault(l => l.LayerName == layerName);
         }
         
         /// <summary>
@@ -47,14 +67,9 @@ namespace Framework.Core
         /// </summary>
         public static int GetBaseSortingOrder(string layerName)
         {
-            var config = GetConfig();
-            if (config == null)
-            {
-                FrameworkLogger.Warn($"[UIProjectConfig] 配置文件不存在，返回默认sortingOrder=0");
-                return 0;
-            }
+            Initialize();
+            var layer = _layerDefinitions.FirstOrDefault(l => l.LayerName == layerName);
             
-            var layer = config.GetLayerDefinition(layerName);
             if (layer == null)
             {
                 FrameworkLogger.Warn($"[UIProjectConfig] 未找到层级定义: {layerName}，返回默认sortingOrder=0");
@@ -69,8 +84,8 @@ namespace Framework.Core
         /// </summary>
         public static UIInstanceConfig GetUIInstanceConfig(string uiName)
         {
-            var config = GetConfig();
-            return config?.GetUIConfig(uiName);
+            Initialize();
+            return _uiConfigCache.TryGetValue(uiName, out var config) ? config : null;
         }
         
         /// <summary>
@@ -81,14 +96,22 @@ namespace Framework.Core
             return GetUIInstanceConfig(uiType.Name);
         }
         
+        /// <summary>
+        /// 获取所有UI配置
+        /// </summary>
+        public static List<UIInstanceConfig> GetAllUIConfigs()
+        {
+            Initialize();
+            return _uiConfigs;
+        }
         
         /// <summary>
-        /// 设置配置文件路径（Editor使用）
+        /// 获取所有层级定义
         /// </summary>
-        public static void SetConfigPath(string path)
+        public static List<UILayerDefinition> GetAllLayerDefinitions()
         {
-            _configPath = path;
-            _config = null; // 重新加载
+            Initialize();
+            return _layerDefinitions;
         }
         
         /// <summary>
@@ -96,27 +119,13 @@ namespace Framework.Core
         /// </summary>
         public static void Reload()
         {
-            _config = null;
-            GetConfig();
+            _initialized = false;
+            _layerDefinitions = null;
+            _uiConfigs = null;
+            _uiConfigCache = null;
         }
         
-#if UNITY_EDITOR
-        /// <summary>
-        /// 获取当前配置路径（Editor使用）
-        /// </summary>
-        public static string GetConfigPath()
-        {
-            return _configPath;
-        }
-        
-        /// <summary>
-        /// 设置配置实例（Editor使用）
-        /// </summary>
-        public static void SetConfig(UIProjectConfig config)
-        {
-            _config = config;
-        }
-#endif
     }
 }
+
 
