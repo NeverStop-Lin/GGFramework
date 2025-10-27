@@ -16,6 +16,7 @@ namespace Framework.Editor.UI
         private string _logicOutputPath;
         private UIProjectConfig _currentConfig;
         private UIManagerWindow _parentWindow;
+        private Vector2 _scrollPosition;
         
         public void OnEnable()
         {
@@ -44,6 +45,12 @@ namespace Framework.Editor.UI
             EditorGUILayout.LabelField("UI管理器设置", EditorStyles.boldLabel);
             EditorGUILayout.Space();
             
+            // 使用垂直布局，固定底部区域
+            EditorGUILayout.BeginVertical();
+            
+            // 可滚动内容区域（自动填充剩余空间，为底部按钮留出约80px）
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.ExpandHeight(true));
+            
             DrawProjectConfigSection();
             EditorGUILayout.Space(10);
             DrawCanvasSettingsSection();
@@ -51,8 +58,20 @@ namespace Framework.Editor.UI
             DrawUICreationSection();
             EditorGUILayout.Space(10);
             DrawCodeGenSection();
+            
+            EditorGUILayout.EndScrollView();
+            
+            // 固定底部区域（不随内容滚动）
+            EditorGUILayout.Space(10);
+            
+            // 使用分隔线
+            var rect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
+            
             EditorGUILayout.Space(10);
             DrawSaveSection();
+            
+            EditorGUILayout.EndVertical();
         }
         
         public void OnDisable()

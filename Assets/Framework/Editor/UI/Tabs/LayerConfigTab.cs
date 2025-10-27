@@ -18,6 +18,7 @@ namespace Framework.Editor.UI
         private string _newLayerName = "";
         private int _newBaseSortingOrder = 0;
         private string _newDescription = "";
+        private Vector2 _scrollPosition;
         
         public void OnEnable()
         {
@@ -35,9 +36,25 @@ namespace Framework.Editor.UI
                 return;
             }
             
+            // 使用垂直布局，固定底部区域
+            EditorGUILayout.BeginVertical();
+            
+            // 可滚动内容区域（自动填充剩余空间）
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.ExpandHeight(true));
             DrawLayerList();
+            EditorGUILayout.EndScrollView();
+            
+            // 固定底部区域（不随内容滚动）
+            EditorGUILayout.Space(10);
+            
+            // 使用分隔线
+            var rect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
+            
             EditorGUILayout.Space(10);
             DrawAddLayer();
+            
+            EditorGUILayout.EndVertical();
         }
         
         public void OnDisable()

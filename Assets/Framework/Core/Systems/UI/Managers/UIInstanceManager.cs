@@ -13,11 +13,12 @@ namespace Framework.Core
         // UI实例缓存
         private readonly Dictionary<Type, IBaseUI> _instances = new Dictionary<Type, IBaseUI>();
         
-        // LRU缓存队列（用于限制缓存数量）
-        private readonly LinkedList<Type> _lruList = new LinkedList<Type>();
+        // 智能缓存统计数据
+        private readonly Dictionary<Type, int> _showCounts = new Dictionary<Type, int>();              // 显示次数
+        private readonly Dictionary<Type, DateTime> _lastShowTime = new Dictionary<Type, DateTime>();  // 最后显示时间
         
-        // 最大缓存数量（LRU策略时使用）
-        private const int MAX_CACHE_SIZE = 20;
+        // 最大缓存数量（智能缓存上限）
+        private const int MAX_CACHE_SIZE = 10;
         
         /// <summary>
         /// 获取UI实例
@@ -26,8 +27,6 @@ namespace Framework.Core
         {
             if (_instances.TryGetValue(uiType, out var instance))
             {
-                // 更新LRU
-                UpdateLRU(uiType);
                 return instance;
             }
             return null;
@@ -39,7 +38,12 @@ namespace Framework.Core
         public void AddInstance(Type uiType, IBaseUI instance)
         {
             _instances[uiType] = instance;
-            UpdateLRU(uiType);
+            
+            // 初始化统计数据
+            if (!_showCounts.ContainsKey(uiType))
+            {
+                _showCounts[uiType] = 0;
+            }
             
             FrameworkLogger.Info($"[UIInstance] 添加实例: {uiType.Name}, 总数: {_instances.Count}");
         }
@@ -51,7 +55,10 @@ namespace Framework.Core
         {
             if (_instances.Remove(uiType))
             {
-                RemoveFromLRU(uiType);
+                // 清除统计数据
+                _showCounts.Remove(uiType);
+                _lastShowTime.Remove(uiType);
+                
                 FrameworkLogger.Info($"[UIInstance] 移除实例: {uiType.Name}, 剩余: {_instances.Count}");
             }
         }
@@ -86,63 +93,114 @@ namespace Framework.Core
         public void Clear()
         {
             _instances.Clear();
-            _lruList.Clear();
+            _showCounts.Clear();
+            _lastShowTime.Clear();
             FrameworkLogger.Info("[UIInstance] 清空所有实例缓存");
         }
         
         /// <summary>
-        /// 检查并执行LRU淘汰
+        /// 记录UI显示（增加显示次数，更新最后显示时间）
         /// </summary>
-        public void CheckLRU()
+        public void RecordShow(Type uiType)
         {
-            if (_instances.Count <= MAX_CACHE_SIZE)
+            // 增加显示次数
+            if (_showCounts.ContainsKey(uiType))
+            {
+                _showCounts[uiType]++;
+            }
+            else
+            {
+                _showCounts[uiType] = 1;
+            }
+            
+            // 更新最后显示时间
+            _lastShowTime[uiType] = DateTime.Now;
+            
+            var count = _showCounts[uiType];
+            FrameworkLogger.Info($"[UIInstance] 记录显示: {uiType.Name}, 次数: {count}");
+        }
+        
+        /// <summary>
+        /// 获取UI显示次数
+        /// </summary>
+        public int GetShowCount(Type uiType)
+        {
+            return _showCounts.TryGetValue(uiType, out var count) ? count : 0;
+        }
+        
+        /// <summary>
+        /// 获取UI最后显示时间
+        /// </summary>
+        public DateTime GetLastShowTime(Type uiType)
+        {
+            return _lastShowTime.TryGetValue(uiType, out var time) ? time : DateTime.MinValue;
+        }
+        
+        /// <summary>
+        /// 检查并执行智能淘汰（基于显示次数和时间）
+        /// 注意：上限只针对智能缓存的UI，永久缓存不占用配额
+        /// </summary>
+        public void CheckSmartEviction(Type justShownUIType)
+        {
+            // 筛选智能缓存的UI（只统计和淘汰 SmartCache 策略的UI）
+            var smartCacheUIs = new List<(Type uiType, IBaseUI ui, int showCount, DateTime lastShowTime)>();
+            
+            foreach (var kvp in _instances)
+            {
+                var uiType = kvp.Key;
+                var ui = kvp.Value;
+                
+                // 获取该UI的配置
+                var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
+                
+                // 只统计智能缓存策略的UI
+                if (config?.CacheStrategy == UICacheStrategy.SmartCache)
+                {
+                    var showCount = GetShowCount(uiType);
+                    var lastShowTime = GetLastShowTime(uiType);
+                    smartCacheUIs.Add((uiType, ui, showCount, lastShowTime));
+                }
+            }
+            
+            // 检查智能缓存的UI数量是否超过上限
+            if (smartCacheUIs.Count <= MAX_CACHE_SIZE)
             {
                 return;
             }
             
-            // 淘汰最少使用的UI
-            while (_instances.Count > MAX_CACHE_SIZE && _lruList.Count > 0)
+            FrameworkLogger.Info($"[UIInstance] 智能缓存UI数量({smartCacheUIs.Count})超过上限({MAX_CACHE_SIZE})，开始淘汰");
+            
+            if (smartCacheUIs.Count == 0)
             {
-                var lruType = _lruList.Last.Value;
-                _lruList.RemoveLast();
-                
-                if (_instances.TryGetValue(lruType, out var ui))
-                {
-                    // 销毁UI
-                    _ = ui.DoDestroy();
-                    _instances.Remove(lruType);
-                    
-                    FrameworkLogger.Info($"[UIInstance] LRU淘汰: {lruType.Name}");
-                }
-            }
-        }
-        
-        /// <summary>
-        /// 更新LRU队列
-        /// </summary>
-        private void UpdateLRU(Type uiType)
-        {
-            // 移除旧位置
-            var node = _lruList.Find(uiType);
-            if (node != null)
-            {
-                _lruList.Remove(node);
+                return;
             }
             
-            // 添加到最前面（表示最近使用）
-            _lruList.AddFirst(uiType);
-        }
-        
-        /// <summary>
-        /// 从LRU队列中移除
-        /// </summary>
-        private void RemoveFromLRU(Type uiType)
-        {
-            var node = _lruList.Find(uiType);
-            if (node != null)
+            // 按淘汰优先级排序
+            // 1. 显示次数少的优先淘汰
+            // 2. 次数相同时，最久未显示的优先淘汰
+            var sorted = smartCacheUIs
+                .OrderBy(x => x.showCount)           // 按显示次数升序
+                .ThenBy(x => x.lastShowTime)         // 按最后显示时间升序
+                .ToList();
+            
+            // 淘汰直到智能缓存UI满足上限
+            var evictCount = 0;
+            while (smartCacheUIs.Count - evictCount > MAX_CACHE_SIZE && sorted.Count > 0)
             {
-                _lruList.Remove(node);
+                var toEvict = sorted[0];
+                sorted.RemoveAt(0);
+                
+                // 销毁UI
+                _ = toEvict.ui.DoDestroy();
+                _instances.Remove(toEvict.uiType);
+                _showCounts.Remove(toEvict.uiType);
+                _lastShowTime.Remove(toEvict.uiType);
+                
+                evictCount++;
+                FrameworkLogger.Info($"[UIInstance] 智能淘汰: {toEvict.uiType.Name} (显示{toEvict.showCount}次, 最后显示: {toEvict.lastShowTime:yyyy-MM-dd HH:mm:ss})");
             }
+            
+            FrameworkLogger.Info($"[UIInstance] 智能淘汰完成: 淘汰{evictCount}个, 智能缓存剩余{smartCacheUIs.Count - evictCount}个, 总缓存{_instances.Count}个");
         }
         
         /// <summary>

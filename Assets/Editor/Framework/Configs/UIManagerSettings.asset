@@ -17,5 +17,6 @@ MonoBehaviour:
   LogicScriptOutputPath: Assets/Game/Scripts/UI
   BindingScriptOutputPath: Assets/Game/Scripts/UI/Generated
   OpenAfterGenerate: 0
+  UIPrefabCreationDefaultPath: Assets/Game/Resources/UI
   PrefabDirectories:
   - Assets/Game/Resources/UI

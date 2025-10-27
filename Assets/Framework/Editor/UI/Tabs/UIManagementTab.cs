@@ -55,15 +55,28 @@ namespace Framework.Editor.UI
                 return;
             }
             
+            // 使用垂直布局，固定底部区域
+            EditorGUILayout.BeginVertical();
+            
             DrawDirectoryManagement();
             EditorGUILayout.Space();
             DrawToolbar();
             EditorGUILayout.Space();
             DrawPrefabList();
+            
+            // 固定底部区域（不随滚动）
             EditorGUILayout.Space();
+            
+            // 使用分隔线
+            var rect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
+            
+            EditorGUILayout.Space(5);
             DrawBatchActions();
-            EditorGUILayout.Space();
+            EditorGUILayout.Space(5);
             DrawStatus();
+            
+            EditorGUILayout.EndVertical();
         }
         
         public void OnDisable()
@@ -203,6 +216,8 @@ namespace Framework.Editor.UI
             {
                 info.LayerName = uiConfig.LayerName;
                 info.InstanceStrategy = uiConfig.InstanceStrategy;
+                info.CacheStrategy = uiConfig.CacheStrategy;
+                info.Preload = uiConfig.Preload;
             }
             else
             {
@@ -211,6 +226,8 @@ namespace Framework.Editor.UI
                     ? _config.LayerDefinitions[0].LayerName 
                     : "Main";
                 info.InstanceStrategy = UIInstanceStrategy.Singleton;
+                info.CacheStrategy = UICacheStrategy.SmartCache;  // 默认智能缓存
+                info.Preload = false;
             }
             
             // 判断状态
@@ -369,13 +386,16 @@ namespace Framework.Editor.UI
             EditorGUILayout.LabelField("Prefab", GUILayout.Width(150));
             EditorGUILayout.LabelField("状态", GUILayout.Width(100));
             EditorGUILayout.LabelField("Logic.cs", GUILayout.Width(100));
-            EditorGUILayout.LabelField("层级", GUILayout.Width(100));
-            EditorGUILayout.LabelField("实例策略", GUILayout.Width(100));
+            EditorGUILayout.LabelField("层级", GUILayout.Width(80));
+            EditorGUILayout.LabelField("实例", GUILayout.Width(70));
+            EditorGUILayout.LabelField("缓存", GUILayout.Width(100));
+            EditorGUILayout.LabelField("预加载", GUILayout.Width(60));
             EditorGUILayout.LabelField("操作", GUILayout.Width(100));
             EditorGUILayout.LabelField("删除", GUILayout.Width(60));
             EditorGUILayout.EndHorizontal();
             
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.Height(400));
+            // 使用灵活高度，自动填充剩余空间
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition, GUILayout.ExpandHeight(true));
             
             for (int i = 0; i < _prefabInfos.Count; i++)
             {
@@ -423,10 +443,16 @@ namespace Framework.Editor.UI
             DrawScriptFile(info.LogicFilePath, info.LogicFileExists, 100);
             
             // 层级（下拉选择）
-            DrawLayerSelector(info, 100);
+            DrawLayerSelector(info, 80);
             
             // 实例策略（下拉选择）
-            DrawInstanceStrategySelector(info, 100);
+            DrawInstanceStrategySelector(info, 70);
+            
+            // 缓存策略（下拉选择）
+            DrawCacheStrategySelector(info, 100);
+            
+            // 预加载（复选框）
+            DrawPreloadToggle(info, 60);
             
             // 操作按钮
             DrawActionButton(info, 100);
@@ -503,6 +529,7 @@ namespace Framework.Editor.UI
             if (newIndex != currentIndex && newIndex >= 0 && newIndex < layerNames.Length)
             {
                 info.LayerName = layerNames[newIndex];
+                UpdateUIConfigFromInfo(info);
             }
         }
         
@@ -519,9 +546,55 @@ namespace Framework.Editor.UI
             if (newIndex != currentIndex)
             {
                 info.InstanceStrategy = (UIInstanceStrategy)newIndex;
+                UpdateUIConfigFromInfo(info);
             }
             
             GUI.backgroundColor = oldColor;
+        }
+        
+        private void DrawCacheStrategySelector(UIPrefabInfo info, int width)
+        {
+            var strategies = new[] { "永久缓存", "智能缓存", "不缓存" };
+            var currentIndex = (int)info.CacheStrategy;
+            
+            var newIndex = EditorGUILayout.Popup(currentIndex, strategies, GUILayout.Width(width));
+            if (newIndex != currentIndex)
+            {
+                info.CacheStrategy = (UICacheStrategy)newIndex;
+                UpdateUIConfigFromInfo(info);
+            }
+        }
+        
+        private void DrawPreloadToggle(UIPrefabInfo info, int width)
+        {
+            var options = new[] { "否", "是" };
+            var currentIndex = info.Preload ? 1 : 0;
+            
+            var newIndex = EditorGUILayout.Popup(currentIndex, options, GUILayout.Width(width));
+            if (newIndex != currentIndex)
+            {
+                info.Preload = (newIndex == 1);
+                UpdateUIConfigFromInfo(info);
+            }
+        }
+        
+        /// <summary>
+        /// 从UIPrefabInfo更新配置
+        /// </summary>
+        private void UpdateUIConfigFromInfo(UIPrefabInfo info)
+        {
+            if (_config == null || !info.ConfigExists) return;
+            
+            var uiConfig = _config.GetUIConfig(info.UIName);
+            if (uiConfig == null) return;
+            
+            uiConfig.LayerName = info.LayerName;
+            uiConfig.InstanceStrategy = info.InstanceStrategy;
+            uiConfig.CacheStrategy = info.CacheStrategy;
+            uiConfig.Preload = info.Preload;
+            
+            // 保存配置
+            UIProjectConfigEditorHelper.SaveConfig(_config);
         }
         
         private void DrawActionButton(UIPrefabInfo info, int width)
@@ -712,9 +785,8 @@ namespace Framework.Editor.UI
                 UIName = info.UIName,
                 ResourcePath = resourcePath,
                 LayerName = layerName,
-                CacheStrategy = UICacheStrategy.AlwaysCache,
-                Preload = false,
-                UseMask = false,
+                CacheStrategy = info.CacheStrategy,  // 使用info中的缓存策略
+                Preload = info.Preload,
                 InstanceStrategy = info.InstanceStrategy
             };
             
@@ -738,9 +810,8 @@ namespace Framework.Editor.UI
                 UIName = uiName,
                 ResourcePath = resourcePath,
                 LayerName = layerName,
-                CacheStrategy = UICacheStrategy.AlwaysCache,
+                CacheStrategy = UICacheStrategy.SmartCache,  // 默认智能缓存
                 Preload = false,
-                UseMask = false,
                 InstanceStrategy = UIInstanceStrategy.Singleton
             };
             
@@ -1536,6 +1607,8 @@ namespace Framework.Editor.UI
             
             public string LayerName;
             public UIInstanceStrategy InstanceStrategy = UIInstanceStrategy.Singleton;
+            public UICacheStrategy CacheStrategy = UICacheStrategy.AlwaysCache;
+            public bool Preload = false;
             public UIPrefabStatus Status;
         }
     

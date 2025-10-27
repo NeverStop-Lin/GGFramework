@@ -130,7 +130,6 @@ namespace Framework.Core
                 existing.LayerName = config.LayerName;
                 existing.CacheStrategy = config.CacheStrategy;
                 existing.Preload = config.Preload;
-                existing.UseMask = config.UseMask;
             }
             else
             {

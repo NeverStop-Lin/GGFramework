@@ -1,7 +1,7 @@
 ﻿// ========================================
 // 自动生成的UI项目配置数据
 // 警告: 请勿手动修改此文件，所有修改将在重新生成时丢失
-// 生成时间: 2025-10-28 01:48:41
+// 生成时间: 2025-10-28 02:28:11
 // ========================================
 
 using System.Collections.Generic;
@@ -85,9 +85,8 @@ namespace Framework.Core
                     UIName = "GameUI",
                     ResourcePath = "UI/GameUI",
                     LayerName = "Main",
-                    CacheStrategy = UICacheStrategy.AlwaysCache,
+                    CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    UseMask = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton
                 },
                 new UIInstanceConfig
@@ -95,9 +94,8 @@ namespace Framework.Core
                     UIName = "MainMenuUI",
                     ResourcePath = "UI/MainMenuUI",
                     LayerName = "Main",
-                    CacheStrategy = UICacheStrategy.AlwaysCache,
+                    CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    UseMask = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton
                 },
                 new UIInstanceConfig
@@ -105,9 +103,8 @@ namespace Framework.Core
                     UIName = "GameOverUI",
                     ResourcePath = "UI/GameOverUI",
                     LayerName = "Main",
-                    CacheStrategy = UICacheStrategy.AlwaysCache,
+                    CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    UseMask = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton
                 },
                 new UIInstanceConfig
@@ -115,9 +112,8 @@ namespace Framework.Core
                     UIName = "GameHUD",
                     ResourcePath = "UI/GameHUD",
                     LayerName = "Main",
-                    CacheStrategy = UICacheStrategy.AlwaysCache,
+                    CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    UseMask = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton
                 },
                 new UIInstanceConfig
@@ -125,9 +121,8 @@ namespace Framework.Core
                     UIName = "UI_001",
                     ResourcePath = "UI/UI_001",
                     LayerName = "Main",
-                    CacheStrategy = UICacheStrategy.AlwaysCache,
+                    CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    UseMask = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton
                 },
             };

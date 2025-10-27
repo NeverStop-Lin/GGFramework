@@ -41,12 +41,6 @@ namespace Framework.Core
         public bool Preload = false;
         
         /// <summary>
-        /// 是否使用遮罩
-        /// </summary>
-        [Tooltip("是否在UI下方显示遮罩")]
-        public bool UseMask = false;
-        
-        /// <summary>
         /// 实例策略
         /// </summary>
         [Tooltip("UI实例策略：单例或多实例")]
@@ -64,7 +58,6 @@ namespace Framework.Core
                 LayerName = this.LayerName,
                 CacheStrategy = this.CacheStrategy,
                 Preload = this.Preload,
-                UseMask = this.UseMask,
                 InstanceStrategy = this.InstanceStrategy
             };
         }

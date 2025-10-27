@@ -228,6 +228,12 @@ namespace Framework.Core
                     AssignSortingOrder(ugui);
                 }
                 
+                // 记录显示（用于智能缓存统计）
+                _instanceManager.RecordShow(uiKey.UIType);
+                
+                // 检查智能淘汰（超出上限时自动淘汰）
+                _instanceManager.CheckSmartEviction(uiKey.UIType);
+                
                 // 发送显示事件
                 EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Show, uiKey.ToString());
                 

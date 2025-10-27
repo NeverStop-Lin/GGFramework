@@ -13,8 +13,6 @@ namespace Framework.Editor.UI
         private int _currentTab = 0;
         private readonly string[] _tabNames = { "UI管理", "层级配置", "设置" };
         
-        private Vector2 _scrollPosition;
-        
         // Tab实例
         private UIManagementTab _uiManagementTab;
         private LayerConfigTab _layerConfigTab;
@@ -27,7 +25,7 @@ namespace Framework.Editor.UI
         public static void ShowWindow()
         {
             var window = GetWindow<UIManagerWindow>("UI管理器");
-            window.minSize = new Vector2(800, 600);
+            window.minSize = new Vector2(1000, 600);
             window.Show();
         }
         
@@ -136,29 +134,18 @@ namespace Framework.Editor.UI
             
             EditorGUILayout.Space(10);
             
-            // 滚动区域
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
-            
-            try
+            // 显示当前Tab（每个Tab自己管理滚动）
+            switch (_currentTab)
             {
-                // 显示当前Tab
-                switch (_currentTab)
-                {
-                    case 0:
-                        _uiManagementTab?.OnGUI();
-                        break;
-                    case 1:
-                        _layerConfigTab?.OnGUI();
-                        break;
-                    case 2:
-                        _settingsTab?.OnGUI();
-                        break;
-                }
-            }
-            finally
-            {
-                // 确保ScrollView总是正确结束
-                EditorGUILayout.EndScrollView();
+                case 0:
+                    _uiManagementTab?.OnGUI();
+                    break;
+                case 1:
+                    _layerConfigTab?.OnGUI();
+                    break;
+                case 2:
+                    _settingsTab?.OnGUI();
+                    break;
             }
         }
         

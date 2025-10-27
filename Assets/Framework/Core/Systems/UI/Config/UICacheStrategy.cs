@@ -6,13 +6,18 @@ namespace Framework.Core
     public enum UICacheStrategy
     {
         /// <summary>
-        /// 总是缓存（Hide后保留实例，再次Show时直接使用）
+        /// 永久缓存（Hide后保留实例，不参与LRU淘汰）
         /// </summary>
         AlwaysCache = 0,
         
         /// <summary>
-        /// 从不缓存（Hide后销毁实例，再次Show时重新创建）
+        /// 智能缓存（Hide后保留实例，超出上限时按显示次数和时间智能淘汰）
         /// </summary>
-        NeverCache = 1
+        SmartCache = 1,
+        
+        /// <summary>
+        /// 不缓存（Hide后立即销毁实例，再次Show时重新创建）
+        /// </summary>
+        NeverCache = 2
     }
 }
