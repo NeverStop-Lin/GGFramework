@@ -22,9 +22,6 @@ namespace Framework.Core
             _states[uiType] = state;
             
             FrameworkLogger.Info($"[UIState] {uiType.Name}: {oldState} -> {state}");
-            
-            // TODO: 触发状态变化事件
-            // OnStateChanged?.Invoke(uiType, oldState, state);
         }
         
         /// <summary>

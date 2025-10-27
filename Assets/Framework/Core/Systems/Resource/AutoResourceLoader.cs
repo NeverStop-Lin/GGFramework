@@ -94,8 +94,7 @@ namespace Framework.Core.Resource
         {
             if (string.IsNullOrEmpty(path))
             {
-                Debug.LogError("[AutoResourceLoader] 资源路径为空");
-                return null;
+                throw new ArgumentException("[AutoResourceLoader] 资源路径为空");
             }
 
             // 策略1：通过清单快速判断（0ms）⭐⭐⭐
@@ -147,8 +146,8 @@ namespace Framework.Core.Resource
                 }
             }
             
-            Debug.LogError($"[AutoResourceLoader] ❌ 加载失败: {path}");
-            return null;
+            // 所有加载方式都失败，抛出异常
+            throw new System.IO.FileNotFoundException($"[AutoResourceLoader] 无法加载资源: {path}，已尝试 Resources 和 Addressables");
         }
 
         /// <summary>
@@ -159,8 +158,7 @@ namespace Framework.Core.Resource
         {
             if (string.IsNullOrEmpty(path))
             {
-                Debug.LogError("[AutoResourceLoader] 资源路径为空");
-                return null;
+                throw new ArgumentException("[AutoResourceLoader] 资源路径为空");
             }
 
             // 策略1：通过清单快速判断（0ms）⭐⭐⭐
@@ -212,8 +210,8 @@ namespace Framework.Core.Resource
                 }
             }
             
-            Debug.LogError($"[AutoResourceLoader] ❌ 加载失败: {path}");
-            return null;
+            // 所有加载方式都失败，抛出异常
+            throw new System.IO.FileNotFoundException($"[AutoResourceLoader] 无法加载资源: {path}，已尝试 Resources 和 Addressables");
         }
 
         /// <summary>

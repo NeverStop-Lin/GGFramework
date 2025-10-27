@@ -124,8 +124,7 @@ namespace Framework.Core.Resource
         {
             if (string.IsNullOrEmpty(path))
             {
-                Debug.LogError("[ResourceCenter] 资源路径为空");
-                return null;
+                throw new ArgumentException("[ResourceCenter] 资源路径为空");
             }
 
             // 先从缓存获取
@@ -136,7 +135,7 @@ namespace Framework.Core.Resource
                 return cachedAsset;
             }
 
-            // 使用加载器加载
+            // 使用加载器加载（加载器会在失败时抛出异常）
             var asset = _loader.Load<T>(path);
             if (asset != null)
             {
@@ -161,8 +160,7 @@ namespace Framework.Core.Resource
         {
             if (string.IsNullOrEmpty(path))
             {
-                Debug.LogError("[ResourceCenter] 资源路径为空");
-                return null;
+                throw new ArgumentException("[ResourceCenter] 资源路径为空");
             }
 
             // 先从缓存获取
@@ -174,7 +172,7 @@ namespace Framework.Core.Resource
                 return cachedAsset;
             }
 
-            // 使用加载器加载
+            // 使用加载器加载（加载器会在失败时抛出异常）
             var asset = await _loader.LoadAsync<T>(path, onProgress);
             if (asset != null)
             {

@@ -1,4 +1,5 @@
 using Framework.Scripts;
+using UnityEngine;
 
 namespace Framework.Scripts
 {
@@ -8,16 +9,6 @@ namespace Framework.Scripts
     /// </summary>
     public partial class Launcher : BaseLauncher
     {
-        protected override void FrameworkInitialize()
-        {
-            base.FrameworkInitialize();
-            // 在此添加框架初始化逻辑
-        }
-
-        protected override void BusinessInitialize()
-        {
-            base.BusinessInitialize();
-            // 在此添加业务初始化逻辑
-        }
+        protected override void FrameworkInitialize() { }
     }
 }

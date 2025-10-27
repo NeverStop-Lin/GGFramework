@@ -70,9 +70,6 @@ namespace Framework.Core
             {
                 var previous = _uiStack.Peek();
                 EnableRaycast(previous);
-                
-                // 如果前一个UI被隐藏了，重新显示
-                // TODO: 需要检查UI的状态
             }
             
             return ui;
@@ -122,18 +119,14 @@ namespace Framework.Core
         /// </summary>
         private void DisableRaycast(IBaseUI ui)
         {
-            try
+            if (ui is UIBehaviour ugui && ugui != null)
             {
-                // 禁用UI的Raycast，防止点击穿透
-                if (ui is UIBehaviour ugui && ugui != null)
+                var raycaster = ugui.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                if (raycaster != null)
                 {
-                    // TODO: 实现禁用Raycast的逻辑
+                    raycaster.enabled = false;
                     FrameworkLogger.Info($"[UIStack] 禁用Raycast: {ui.GetType().Name}");
                 }
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"[UIStack] 禁用Raycast失败: {ui.GetType().Name}, {ex.Message}");
             }
         }
         
@@ -142,17 +135,14 @@ namespace Framework.Core
         /// </summary>
         private void EnableRaycast(IBaseUI ui)
         {
-            try
+            if (ui is UIBehaviour ugui && ugui != null)
             {
-                if (ui is UIBehaviour ugui && ugui != null)
+                var raycaster = ugui.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+                if (raycaster != null)
                 {
-                    // TODO: 实现启用Raycast的逻辑
+                    raycaster.enabled = true;
                     FrameworkLogger.Info($"[UIStack] 启用Raycast: {ui.GetType().Name}");
                 }
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"[UIStack] 启用Raycast失败: {ui.GetType().Name}, {ex.Message}");
             }
         }
     }

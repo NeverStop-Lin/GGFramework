@@ -17,9 +17,10 @@ namespace Framework.Core
         public T Get<T>() where T : IConfig, new()
         {
             // 首次调用时初始化BaseConfig的资源加载器
+            // 现在使用BaseConfigCore来设置共享的资源加载器
             if (!_initialized)
             {
-                BaseConfig<object>.SetResourceLoader(_resource);
+                BaseConfigCore.SetResourceLoader(_resource);
                 _initialized = true;
             }
             

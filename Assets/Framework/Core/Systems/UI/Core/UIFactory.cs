@@ -25,14 +25,26 @@ namespace Framework.Core
             // 获取UI配置
             var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
             
-            // 方式1: 从Prefab创建（推荐）
-            if (config != null && !string.IsNullOrEmpty(config.ResourcePath))
+            // 严格模式：必须配置UI
+            if (config == null)
             {
-                return CreateFromPrefab(uiType, config.ResourcePath);
+                throw new InvalidOperationException(
+                    $"[UIFactory] UI 未配置: {uiType.Name}\n" +
+                    $"请在 UIProjectConfig 中添加该 UI 的配置\n" +
+                    $"路径: Assets/Resources/Framework/Configs/UIProjectConfig.asset");
             }
             
-            // 方式2: 动态创建（用于没有Prefab的UI）
-            return CreateDynamic(uiType);
+            // 严格模式：必须配置Prefab路径
+            if (string.IsNullOrEmpty(config.ResourcePath))
+            {
+                throw new InvalidOperationException(
+                    $"[UIFactory] UI 缺少 Prefab 路径: {uiType.Name}\n" +
+                    $"请在 UIProjectConfig 中配置 ResourcePath 字段\n" +
+                    $"例如: UI/MainMenuUI");
+            }
+            
+            // 从Prefab创建UI（唯一方式）
+            return CreateFromPrefab(uiType, config.ResourcePath);
         }
         
         /// <summary>
@@ -56,16 +68,21 @@ namespace Framework.Core
                 var go = _container.InstantiatePrefab(prefab, uiRoot);
                 go.name = uiType.Name; // 设置名称为UI类名
                 
+                // 确保 Canvas 启用 overrideSorting，让 CanvasScaler 等组件正常工作
+                var canvas = go.GetComponent<Canvas>();
+                if (canvas != null)
+                {
+                    canvas.overrideSorting = true;
+                }
+                
                 // 获取UI组件
                 var ui = go.GetComponent(uiType) as IBaseUI;
                 if (ui == null)
                 {
-                    // Prefab上没有UI组件，动态添加
-                    FrameworkLogger.Warn($"[UIFactory] Prefab上缺少UI组件，动态添加: {uiType.Name}");
-                    ui = go.AddComponent(uiType) as IBaseUI;
-                    
-                    // 手动注入依赖
-                    _container.Inject(ui);
+                    // Prefab上没有UI组件是严重的配置错误，应该抛出异常
+                    // 而不是静默地尝试修复，这会掩盖实际问题
+                    UnityEngine.Object.Destroy(go);
+                    throw new Exception($"Prefab上缺少UI组件 {uiType.Name}，请在Prefab上添加该脚本组件");
                 }
                 
                 FrameworkLogger.Info($"[UIFactory] 从Prefab创建UI成功: {uiType.Name} <- {resourcePath}");
@@ -75,49 +92,6 @@ namespace Framework.Core
             catch (Exception ex)
             {
                 FrameworkLogger.Error($"[UIFactory] 从Prefab创建UI失败: {uiType.Name}, 路径: {resourcePath}, 错误: {ex.Message}");
-                throw;
-            }
-        }
-        
-        /// <summary>
-        /// 动态创建UI（没有Prefab时使用）
-        /// </summary>
-        private IBaseUI CreateDynamic(Type uiType)
-        {
-            try
-            {
-                // 获取UIRoot
-                var uiRoot = UIRootManager.GetOrCreateUIRoot();
-                
-                // 创建新GameObject
-                var go = new GameObject(uiType.Name);
-                go.transform.SetParent(uiRoot, false);
-                
-                // 添加必要的组件
-                var rectTransform = go.AddComponent<RectTransform>();
-                rectTransform.anchorMin = Vector2.zero;
-                rectTransform.anchorMax = Vector2.one;
-                rectTransform.sizeDelta = Vector2.zero;
-                rectTransform.anchoredPosition = Vector2.zero;
-                
-                var canvas = go.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                
-                go.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-                
-                // 添加UI组件
-                var ui = go.AddComponent(uiType) as IBaseUI;
-                
-                // Zenject注入
-                _container.InjectGameObject(go);
-                
-                FrameworkLogger.Info($"[UIFactory] 动态创建UI成功: {uiType.Name}");
-                
-                return ui;
-            }
-            catch (Exception ex)
-            {
-                FrameworkLogger.Error($"[UIFactory] 动态创建UI失败: {uiType.Name}, 错误: {ex.Message}");
                 throw;
             }
         }

@@ -10,7 +10,7 @@ namespace Framework.Core
     public static class UIProjectConfigManager
     {
         private static UIProjectConfig _config;
-        private static string _configPath = "Config/UIProjectConfig";
+        private static string _configPath = "Framework/Configs/UIProjectConfig";
         
         /// <summary>
         /// 获取UI项目配置

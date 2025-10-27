@@ -373,6 +373,7 @@ namespace Framework.Core
 
         /// <summary>
         /// 设置UI的层级索引（通过修改Canvas的sortingOrder）
+        /// 注意：overrideSorting 已在 UIFactory 创建时设置
         /// </summary>
         public virtual void SetIndex(int i)
         {

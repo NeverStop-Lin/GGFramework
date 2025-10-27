@@ -67,8 +67,7 @@ namespace Framework.Modules.Pool
         {
             if (prefab == null)
             {
-                Debug.LogError("[PoolModule] 预制体为空");
-                return null;
+                throw new ArgumentNullException(nameof(prefab), "[PoolModule] 预制体为空");
             }
 
             poolName = poolName ?? prefab.name;
@@ -88,14 +87,14 @@ namespace Framework.Modules.Pool
         /// <summary>
         /// 获取GameObject对象池
         /// </summary>
+        /// <exception cref="KeyNotFoundException">当对象池不存在时抛出</exception>
         public GameObjectPool GetGameObjectPool(string poolName)
         {
             if (_gameObjectPools.TryGetValue(poolName, out var pool))
             {
                 return pool;
             }
-            Debug.LogWarning($"[PoolModule] 对象池不存在: {poolName}");
-            return null;
+            throw new KeyNotFoundException($"[PoolModule] 对象池不存在: {poolName}");
         }
 
         /// <summary>
@@ -114,8 +113,7 @@ namespace Framework.Modules.Pool
         {
             if (prefab == null)
             {
-                Debug.LogError("[PoolModule] 预制体为空");
-                return null;
+                throw new ArgumentNullException(nameof(prefab), "[PoolModule] 预制体为空");
             }
 
             var poolName = prefab.name;

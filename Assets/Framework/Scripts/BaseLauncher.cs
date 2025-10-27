@@ -13,7 +13,6 @@ namespace Framework.Scripts
             FrameworkInitialize();
             BusinessInitialize();
         }
-
         /// <summary>
         /// 框架初始�?
         /// 在此方法中进行框架相关的初始�?

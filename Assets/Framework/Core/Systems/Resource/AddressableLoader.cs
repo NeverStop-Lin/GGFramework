@@ -51,8 +51,7 @@ namespace Framework.Core.Resource
         {
             if (!_isAddressablesAvailable)
             {
-                Debug.LogError("[AddressableLoader] Addressables 不可用。请安装 Addressables 包。");
-                return null;
+                throw new NotSupportedException("[AddressableLoader] Addressables 不可用。请安装 Addressables 包。");
             }
 
             try
@@ -71,14 +70,18 @@ namespace Framework.Core.Resource
                 }
                 else
                 {
-                    Debug.LogWarning($"[AddressableLoader] 资源加载失败: {path}");
-                    return null;
+                    throw new System.IO.FileNotFoundException($"[AddressableLoader] 资源加载失败: {path}");
                 }
+            }
+            catch (System.IO.FileNotFoundException)
+            {
+                // 直接重新抛出资源未找到异常
+                throw;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[AddressableLoader] 资源加载异常: {path}\n{e}");
-                return null;
+                // 包装其他异常
+                throw new Exception($"[AddressableLoader] 资源加载异常: {path}", e);
             }
         }
 
@@ -89,8 +92,7 @@ namespace Framework.Core.Resource
         {
             if (!_isAddressablesAvailable)
             {
-                Debug.LogError("[AddressableLoader] Addressables 不可用。请安装 Addressables 包。");
-                return null;
+                throw new NotSupportedException("[AddressableLoader] Addressables 不可用。请安装 Addressables 包。");
             }
 
             try
@@ -123,14 +125,18 @@ namespace Framework.Core.Resource
                 }
                 else
                 {
-                    Debug.LogWarning($"[AddressableLoader] 资源加载失败: {path}");
-                    return null;
+                    throw new System.IO.FileNotFoundException($"[AddressableLoader] 资源加载失败: {path}");
                 }
+            }
+            catch (System.IO.FileNotFoundException)
+            {
+                // 直接重新抛出资源未找到异常
+                throw;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[AddressableLoader] 资源加载异常: {path}\n{e}");
-                return null;
+                // 包装其他异常
+                throw new Exception($"[AddressableLoader] 资源加载异常: {path}", e);
             }
         }
 
