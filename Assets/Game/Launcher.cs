@@ -11,13 +11,14 @@ namespace Framework.Scripts
     /// </summary>
     public partial class Launcher
     {
+        public GameObject GameManagerPrefab;
         private GameManager _gameManagerInstance;
 
         protected override void BusinessInitialize()
         {
             // 在此添加业务初始化逻辑
-            // InitializeGame();
-            GridFramework.UI.Show<MainMenuUI>();
+            // GridFramework.UI.Show<MainMenuUI>();
+            InitializeGame();
         }
 
         /// <summary>
@@ -30,9 +31,7 @@ namespace Framework.Scripts
             // 创建游戏管理器
             if (GameManager.Instance == null)
             {
-                // 如果没有预制体，动态创建
-                var managerObject = new GameObject("GameManager");
-                _gameManagerInstance = managerObject.AddComponent<GameManager>();
+                _gameManagerInstance = Instantiate(GameManagerPrefab).GetComponent<GameManager>();
             }
 
             // 显示主菜单

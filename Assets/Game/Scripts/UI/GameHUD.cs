@@ -9,7 +9,7 @@ namespace Game.UI
     /// 游戏主界面HUD
     /// 显示玩家状态和资源信息
     /// </summary>
-    public class GameHUD : UIBehaviour
+    public partial class GameHUD : UIBehaviour
     {
         [Header("状态条")]
         [SerializeField] private Slider healthBar;
@@ -56,19 +56,19 @@ namespace Game.UI
 
             // 生命值变化
             playerData.HealthObserver.OnChange.Add((newVal, oldVal) => UpdateHealthDisplay(newVal, oldVal), this);
-            
+
             // 饥饿值变化
             playerData.HungerObserver.OnChange.Add((newVal, oldVal) => UpdateHungerDisplay(newVal, oldVal), this);
-            
+
             // 口渴值变化
             playerData.ThirstObserver.OnChange.Add((newVal, oldVal) => UpdateThirstDisplay(newVal, oldVal), this);
-            
+
             // 木材数量变化
             playerData.WoodCountObserver.OnChange.Add((newVal, oldVal) => UpdateWoodDisplay(newVal, oldVal), this);
-            
+
             // 石头数量变化
             playerData.StoneCountObserver.OnChange.Add((newVal, oldVal) => UpdateStoneDisplay(newVal, oldVal), this);
-            
+
             // 生存时间变化
             playerData.SurvivalTimeObserver.OnChange.Add((newVal, oldVal) => UpdateSurvivalTimeDisplay(newVal, oldVal), this);
         }
@@ -79,7 +79,7 @@ namespace Game.UI
         private void UnbindDataObservers()
         {
             if (_gameManager == null) return;
-            
+
             var playerData = _gameManager.PlayerData;
 
             // 注意：由于使用了lambda表达式，无法直接Remove
@@ -93,7 +93,7 @@ namespace Game.UI
         private void InitializeDisplay()
         {
             var playerData = _gameManager.PlayerData;
-            
+
             UpdateHealthDisplay(playerData.Health, 0);
             UpdateHungerDisplay(playerData.Hunger, 0);
             UpdateThirstDisplay(playerData.Thirst, 0);
@@ -115,7 +115,7 @@ namespace Game.UI
             {
                 healthBar.value = newValue / Player.PlayerData.MaxHealth;
             }
-            
+
             if (healthText != null)
             {
                 healthText.text = $"{newValue:F0}/{Player.PlayerData.MaxHealth:F0}";
@@ -128,7 +128,7 @@ namespace Game.UI
             {
                 hungerBar.value = newValue / Player.PlayerData.MaxHunger;
             }
-            
+
             if (hungerText != null)
             {
                 hungerText.text = $"{newValue:F0}/{Player.PlayerData.MaxHunger:F0}";
@@ -141,7 +141,7 @@ namespace Game.UI
             {
                 thirstBar.value = newValue / Player.PlayerData.MaxThirst;
             }
-            
+
             if (thirstText != null)
             {
                 thirstText.text = $"{newValue:F0}/{Player.PlayerData.MaxThirst:F0}";

@@ -9,7 +9,7 @@ namespace Game.UI
     /// 游戏结束界面
     /// 显示生存时间和提供重新开始选项
     /// </summary>
-    public class GameOverUI : UIBehaviour
+    public partial class GameOverUI
     {
         [Header("显示组件")]
         [SerializeField] private Text titleText;
@@ -93,7 +93,7 @@ namespace Game.UI
         private void OnRestartClick()
         {
             Debug.Log("点击重新开始");
-            
+
             var gameManager = GameManager.Instance;
             if (gameManager != null)
             {
@@ -108,7 +108,7 @@ namespace Game.UI
         private void OnMainMenuClick()
         {
             Debug.Log("点击返回主菜单");
-            
+
             var gameManager = GameManager.Instance;
             if (gameManager != null)
             {

@@ -1003,12 +1003,7 @@ namespace Framework.Editor.UI
             // 移除其他非法字符
             name = System.Text.RegularExpressions.Regex.Replace(name, @"[^\w]", "_");
             
-            // 如果不以UI结尾，添加UI后缀
-            if (!name.EndsWith("UI"))
-            {
-                name += "UI";
-            }
-            
+            // 直接使用预制体名称，不添加UI后缀
             return name;
         }
         

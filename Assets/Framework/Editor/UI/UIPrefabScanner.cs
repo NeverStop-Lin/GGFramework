@@ -265,6 +265,7 @@ namespace Framework.Editor.UI
         /// <summary>
         /// 转换为帕斯卡命名（首字母大写）
         /// close_panel -> ClosePanel
+        /// StartGame -> StartGame（保留原有大小写）
         /// </summary>
         private static string ToPascalCase(string name)
         {
@@ -278,8 +279,8 @@ namespace Framework.Editor.UI
             {
                 if (string.IsNullOrEmpty(part)) continue;
                 
-                // 首字母大写
-                result += char.ToUpper(part[0]) + part.Substring(1).ToLower();
+                // 首字母大写，保留其余字符的原有大小写
+                result += char.ToUpper(part[0]) + part.Substring(1);
             }
             
             return result;

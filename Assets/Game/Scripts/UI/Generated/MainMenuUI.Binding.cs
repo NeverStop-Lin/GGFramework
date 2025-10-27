@@ -18,6 +18,30 @@ namespace Game.UI
     {
         #region Auto-Generated Fields
         
+        /// <summary>
+        /// StartGame
+        /// 路径: MainMenuUI/@Button_StartGame
+        /// </summary>
+        private Button _startGameButton;
+        
+        /// <summary>
+        /// Continue
+        /// 路径: MainMenuUI/@Button_Continue
+        /// </summary>
+        private Button _continueButton;
+        
+        /// <summary>
+        /// ExitGame
+        /// 路径: MainMenuUI/@Button_ExitGame
+        /// </summary>
+        private Button _exitGameButton;
+        
+        /// <summary>
+        /// Title
+        /// 路径: MainMenuUI/@Text_Title
+        /// </summary>
+        private Text _titleText;
+        
         #endregion
         
         #region Auto-Generated Binding
@@ -31,9 +55,44 @@ namespace Game.UI
             base.BindComponents();
             
             // 注意：路径是相对于当前GameObject的，不包含根节点名称
+            _startGameButton = FindComponent<Button>("@Button_StartGame");
+            _continueButton = FindComponent<Button>("@Button_Continue");
+            _exitGameButton = FindComponent<Button>("@Button_ExitGame");
+            _titleText = FindComponent<Text>("@Text_Title");
         }
         
         #endregion
         
+        #region Auto-Generated Events
+        
+        /// <summary>
+        /// 注册所有Button事件
+        /// </summary>
+        protected override void RegisterEvents()
+        {
+            base.RegisterEvents();
+            
+            _startGameButton.onClick.AddListener(OnStartGameClick);
+            _continueButton.onClick.AddListener(OnContinueClick);
+            _exitGameButton.onClick.AddListener(OnExitGameClick);
+        }
+        
+        /// <summary>
+        /// 注销所有Button事件
+        /// </summary>
+        protected override void UnregisterEvents()
+        {
+            // 添加空检查，防止组件未找到时出错
+            if (_startGameButton != null)
+                _startGameButton.onClick.RemoveListener(OnStartGameClick);
+            if (_continueButton != null)
+                _continueButton.onClick.RemoveListener(OnContinueClick);
+            if (_exitGameButton != null)
+                _exitGameButton.onClick.RemoveListener(OnExitGameClick);
+            
+            base.UnregisterEvents();
+        }
+        
+        #endregion
     }
 }

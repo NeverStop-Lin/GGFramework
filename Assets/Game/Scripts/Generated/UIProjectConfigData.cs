@@ -1,7 +1,7 @@
 ﻿// ========================================
 // 自动生成的UI项目配置数据
 // 警告: 请勿手动修改此文件，所有修改将在重新生成时丢失
-// 生成时间: 2025-10-27 17:23:31
+// 生成时间: 2025-10-27 21:39:36
 // ========================================
 
 using System.Collections.Generic;
@@ -88,6 +88,26 @@ namespace Framework.Core
                 {
                     UIName = "MainMenuUI",
                     ResourcePath = "UI/MainMenuUI",
+                    LayerName = "Main",
+                    CacheStrategy = UICacheStrategy.AlwaysCache,
+                    Preload = false,
+                    UseMask = false,
+                    InstanceStrategy = UIInstanceStrategy.Singleton
+                },
+                new UIInstanceConfig
+                {
+                    UIName = "GameOverUI",
+                    ResourcePath = "UI/GameOverUI",
+                    LayerName = "Main",
+                    CacheStrategy = UICacheStrategy.AlwaysCache,
+                    Preload = false,
+                    UseMask = false,
+                    InstanceStrategy = UIInstanceStrategy.Singleton
+                },
+                new UIInstanceConfig
+                {
+                    UIName = "GameHUD",
+                    ResourcePath = "UI/GameHUD",
                     LayerName = "Main",
                     CacheStrategy = UICacheStrategy.AlwaysCache,
                     Preload = false,

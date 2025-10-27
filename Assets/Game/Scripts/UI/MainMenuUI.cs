@@ -12,38 +12,11 @@ namespace Game.UI
     public partial class MainMenuUI
     {
         [Header("按钮")]
-        [SerializeField] private Button startGameButton;
-        [SerializeField] private Button continueGameButton;
-        [SerializeField] private Button exitGameButton;
+
 
         private GameManager _gameManager;
 
         #region 生命周期
-
-        protected override void Awake()
-        {
-            base.Awake();
-
-            // 绑定按钮事件
-            if (startGameButton != null)
-            {
-                startGameButton.onClick.AddListener(OnStartGameClick);
-            }
-
-            if (continueGameButton != null)
-            {
-                continueGameButton.onClick.AddListener(OnContinueGameClick);
-            }
-
-            if (exitGameButton != null)
-            {
-                exitGameButton.onClick.AddListener(OnExitGameClick);
-            }
-        }
-
-        protected override void OnCreate(params object[] args)
-        {
-        }
 
         protected override void OnShow(params object[] args)
         {
@@ -55,26 +28,7 @@ namespace Game.UI
         {
         }
 
-        protected override void OnDestroy()
-        {
-            base.OnDestroy();
 
-            // 解绑按钮事件
-            if (startGameButton != null)
-            {
-                startGameButton.onClick.RemoveListener(OnStartGameClick);
-            }
-
-            if (continueGameButton != null)
-            {
-                continueGameButton.onClick.RemoveListener(OnContinueGameClick);
-            }
-
-            if (exitGameButton != null)
-            {
-                exitGameButton.onClick.RemoveListener(OnExitGameClick);
-            }
-        }
 
         #endregion
 
@@ -130,13 +84,20 @@ namespace Game.UI
             if (_gameManager == null) return;
 
             bool hasSaveData = _gameManager.PlayerData.HasSaveData();
-
-            if (continueGameButton != null)
+            if (_continueButton != null)
             {
-                continueGameButton.interactable = hasSaveData;
+                _continueButton.interactable = hasSaveData;
             }
         }
 
         #endregion
+
+
+        private void OnContinueClick()
+        {
+        }
+
+
+
     }
 }
