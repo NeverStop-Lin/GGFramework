@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.Compilation;
 using UnityEngine;
 using Framework.Core;
 using System.Collections.Generic;
@@ -25,7 +26,6 @@ namespace Framework.Editor.UI
         // 生成设置
         private string _namespace = "Game.UI";
         private string _logicOutputPath = "Assets/Game/Scripts/UI";
-        private string _bindingOutputPath = "Assets/Game/Scripts/UI/Generated";
         
         // 延迟刷新标记
         private bool _needRefresh = false;
@@ -84,7 +84,6 @@ namespace Framework.Editor.UI
             {
                 _namespace = _settings.DefaultNamespace;
                 _logicOutputPath = _settings.LogicScriptOutputPath;
-                _bindingOutputPath = _settings.BindingScriptOutputPath;
             }
         }
         
@@ -192,12 +191,9 @@ namespace Framework.Editor.UI
         {
             // 检查代码文件
             var logicPath = Path.Combine(_logicOutputPath, $"{info.UIName}.cs");
-            var bindingPath = Path.Combine(_bindingOutputPath, $"{info.UIName}.Binding.cs");
             
             info.LogicFileExists = File.Exists(logicPath);
-            info.BindingFileExists = File.Exists(bindingPath);
             info.LogicFilePath = logicPath;
-            info.BindingFilePath = bindingPath;
             
             // 检查配置
             var uiConfig = _config.GetUIConfig(info.UIName);
@@ -223,11 +219,11 @@ namespace Framework.Editor.UI
                 // Prefab不存在但配置存在
                 info.Status = UIPrefabStatus.PrefabMissing;
             }
-            else if (info.LogicFileExists && info.BindingFileExists && info.ConfigExists)
+            else if (info.LogicFileExists && info.ConfigExists)
             {
                 info.Status = UIPrefabStatus.Created;
             }
-            else if (info.LogicFileExists || info.BindingFileExists || info.ConfigExists)
+            else if (info.LogicFileExists || info.ConfigExists)
             {
                 info.Status = UIPrefabStatus.Partial;
             }
@@ -373,7 +369,6 @@ namespace Framework.Editor.UI
             EditorGUILayout.LabelField("Prefab", GUILayout.Width(150));
             EditorGUILayout.LabelField("状态", GUILayout.Width(100));
             EditorGUILayout.LabelField("Logic.cs", GUILayout.Width(100));
-            EditorGUILayout.LabelField("Binding.cs", GUILayout.Width(100));
             EditorGUILayout.LabelField("层级", GUILayout.Width(100));
             EditorGUILayout.LabelField("实例策略", GUILayout.Width(100));
             EditorGUILayout.LabelField("操作", GUILayout.Width(100));
@@ -426,9 +421,6 @@ namespace Framework.Editor.UI
             
             // Logic.cs
             DrawScriptFile(info.LogicFilePath, info.LogicFileExists, 100);
-            
-            // Binding.cs
-            DrawScriptFile(info.BindingFilePath, info.BindingFileExists, 100);
             
             // 层级（下拉选择）
             DrawLayerSelector(info, 100);
@@ -626,22 +618,8 @@ namespace Framework.Editor.UI
                     }
                 }
                 
-                // 步骤2: 扫描Prefab
-                var scanResult = UIPrefabScanner.ScanPrefab(info.Prefab);
-                
-                if (scanResult.HasErrors)
-                {
-                    var errorMsg = string.Join("\n", scanResult.Errors);
-                    EditorUtility.DisplayDialog("扫描失败", $"{info.UIName} Prefab扫描失败：\n\n{errorMsg}", "确定");
-                    return;
-                }
-                
-                // 生成资源路径
-                var resourcePath = GetResourcePath(prefabPath);
-                
                 // 生成代码
-                var bindingCode = UICodeTemplate.GenerateBindingCode(info.UIName, _namespace, scanResult.Components, prefabPath);
-                var logicCode = UICodeTemplate.GenerateLogicCode(info.UIName, _namespace, scanResult.Components, resourcePath);
+                var logicCode = UICodeTemplate.GenerateLogicCode(info.UIName, _namespace);
                 
                 // 确保目录存在
                 if (!Directory.Exists(_logicOutputPath))
@@ -649,46 +627,15 @@ namespace Framework.Editor.UI
                     Directory.CreateDirectory(_logicOutputPath);
                 }
                 
-                if (!Directory.Exists(_bindingOutputPath))
-                {
-                    Directory.CreateDirectory(_bindingOutputPath);
-                }
-                
-                // 写入Binding文件（对比后更新）
-                if (File.Exists(info.BindingFilePath))
-                {
-                    var existingBindingCode = File.ReadAllText(info.BindingFilePath);
-                    if (existingBindingCode != bindingCode)
-                    {
-                        File.WriteAllText(info.BindingFilePath, bindingCode);
-                        Debug.Log($"[UI代码生成] {info.UIName} Binding 文件已更新");
-                    }
-                }
-                else
-                {
-                    File.WriteAllText(info.BindingFilePath, bindingCode);
-                    Debug.Log($"[UI代码生成] {info.UIName} Binding 文件已创建");
-                }
-                
-                // 写入Logic文件
+                // 写入Logic文件（仅在不存在时创建）
                 if (!File.Exists(info.LogicFilePath))
                 {
-                    // 首次生成：创建完整文件
                     File.WriteAllText(info.LogicFilePath, logicCode);
                     Debug.Log($"[UI代码生成] {info.UIName} Logic 文件已创建");
                 }
                 else
                 {
-                    // 已存在：增量更新（添加缺失的事件处理方法）
-                    var existingCode = File.ReadAllText(info.LogicFilePath);
-                    var updatedCode = UICodeTemplate.AppendMissingEventHandlers(existingCode, scanResult.Components);
-                    
-                    // 只有在有变化时才写入
-                    if (updatedCode != existingCode)
-                    {
-                        File.WriteAllText(info.LogicFilePath, updatedCode);
-                        Debug.Log($"[UI代码生成] {info.UIName} Logic 文件已添加缺失的事件处理方法");
-                    }
+                    Debug.Log($"[UI代码生成] {info.UIName} Logic 文件已存在，跳过");
                 }
                 
                 // 刷新资源
@@ -813,7 +760,6 @@ namespace Framework.Editor.UI
                 info.UIName,
                 info.Prefab != null,
                 info.LogicFileExists,
-                info.BindingFileExists,
                 info.ConfigExists
             );
             
@@ -837,26 +783,22 @@ namespace Framework.Editor.UI
                     }
                 }
                 
-                // 删除逻辑脚本
+                // 删除逻辑脚本（先从预制体移除组件）
                 if (deleteOptions.DeleteLogicScript && info.LogicFileExists && File.Exists(info.LogicFilePath))
                 {
+                    // 如果预制体存在，先移除上面的脚本组件
+                    if (info.Prefab != null)
+                    {
+                        RemoveScriptFromPrefab(info.Prefab, $"{_namespace}.{info.UIName}");
+                    }
+                    
+                    // 删除脚本文件
                     File.Delete(info.LogicFilePath);
                     if (File.Exists(info.LogicFilePath + ".meta"))
                     {
                         File.Delete(info.LogicFilePath + ".meta");
                     }
                     deletedItems.Add("逻辑脚本");
-                }
-                
-                // 删除绑定脚本
-                if (deleteOptions.DeleteBindingScript && info.BindingFileExists && File.Exists(info.BindingFilePath))
-                {
-                    File.Delete(info.BindingFilePath);
-                    if (File.Exists(info.BindingFilePath + ".meta"))
-                    {
-                        File.Delete(info.BindingFilePath + ".meta");
-                    }
-                    deletedItems.Add("绑定脚本");
                 }
                 
                 // 删除配置
@@ -932,7 +874,6 @@ namespace Framework.Editor.UI
             // 统计存在的内容
             var hasPrefab = selectedInfos.Any(i => i.Prefab != null);
             var hasLogic = selectedInfos.Any(i => i.LogicFileExists);
-            var hasBinding = selectedInfos.Any(i => i.BindingFileExists);
             var hasConfig = selectedInfos.Any(i => i.ConfigExists);
             
             // 显示统一的删除选项对话框（使用第一个UI的名称作为标题提示）
@@ -940,7 +881,6 @@ namespace Framework.Editor.UI
                 $"{selectedInfos.Count} 个UI",
                 hasPrefab,
                 hasLogic,
-                hasBinding,
                 hasConfig
             );
             
@@ -966,23 +906,20 @@ namespace Framework.Editor.UI
                         }
                     }
                     
-                    // 删除逻辑脚本
+                    // 删除逻辑脚本（先从预制体移除组件）
                     if (deleteOptions.DeleteLogicScript && info.LogicFileExists && File.Exists(info.LogicFilePath))
                     {
+                        // 如果预制体存在，先移除上面的脚本组件
+                        if (info.Prefab != null)
+                        {
+                            RemoveScriptFromPrefab(info.Prefab, $"{_namespace}.{info.UIName}");
+                        }
+                        
+                        // 删除脚本文件
                         File.Delete(info.LogicFilePath);
                         if (File.Exists(info.LogicFilePath + ".meta"))
                         {
                             File.Delete(info.LogicFilePath + ".meta");
-                        }
-                    }
-                    
-                    // 删除绑定脚本
-                    if (deleteOptions.DeleteBindingScript && info.BindingFileExists && File.Exists(info.BindingFilePath))
-                    {
-                        File.Delete(info.BindingFilePath);
-                        if (File.Exists(info.BindingFilePath + ".meta"))
-                        {
-                            File.Delete(info.BindingFilePath + ".meta");
                         }
                     }
                     
@@ -1017,35 +954,197 @@ namespace Framework.Editor.UI
             EditorUtility.DisplayDialog("批量删除完成", _statusMessage, "确定");
         }
         
+        // 使用 SessionState 存储待绑定信息的键
+        private const string PENDING_ATTACHMENTS_KEY = "UIManagement_PendingAttachments";
+        
         /// <summary>
         /// 等待编译完成并绑定脚本
         /// </summary>
         private void WaitForCompilationAndAttach(GameObject prefab, string uiName, string namespaceName)
         {
-            var startTime = EditorApplication.timeSinceStartup;
-            var maxWaitTime = 5.0;
             var prefabPath = AssetDatabase.GetAssetPath(prefab);
             var typeName = $"{namespaceName}.{uiName}";
             
-            EditorApplication.update += CheckCompilationAndAttach;
+            Debug.Log($"[UIManagement] 开始等待编译完成: {typeName}");
+            Debug.Log($"[UIManagement] 预制体路径: {prefabPath}");
             
-            void CheckCompilationAndAttach()
+            // 先尝试立即绑定（如果类型已存在）
+            if (TryAttachScriptImmediately(prefabPath, typeName))
             {
-                if (EditorApplication.timeSinceStartup - startTime > maxWaitTime)
-                {
-                    EditorApplication.update -= CheckCompilationAndAttach;
-                    Debug.LogWarning($"[UIManagement] {uiName} 等待编译超时，请手动添加组件到Prefab");
-                    return;
-                }
-                
-                if (EditorApplication.isCompiling)
-                {
-                    return;
-                }
-                
-                EditorApplication.update -= CheckCompilationAndAttach;
-                AttachScriptToPrefab(prefabPath, typeName);
+                Debug.Log($"[UIManagement] 类型已存在，成功立即绑定");
+                return;
             }
+            
+            // 类型不存在，保存到 SessionState 等待程序集重载后绑定
+            Debug.Log($"[UIManagement] 类型尚未加载，保存到待绑定列表");
+            AddPendingAttachment(prefabPath, typeName);
+        }
+        
+        /// <summary>
+        /// 添加待绑定项
+        /// </summary>
+        private void AddPendingAttachment(string prefabPath, string typeName)
+        {
+            // 从 SessionState 读取现有列表
+            var json = SessionState.GetString(PENDING_ATTACHMENTS_KEY, "");
+            PendingAttachmentList list;
+            
+            if (string.IsNullOrEmpty(json))
+            {
+                list = new PendingAttachmentList();
+            }
+            else
+            {
+                try
+                {
+                    list = JsonUtility.FromJson<PendingAttachmentList>(json);
+                    if (list == null || list.items == null)
+                    {
+                        list = new PendingAttachmentList();
+                    }
+                }
+                catch
+                {
+                    list = new PendingAttachmentList();
+                }
+            }
+            
+            // 添加新项
+            list.items.Add(new PendingAttachment { prefabPath = prefabPath, typeName = typeName });
+            
+            // 保存回 SessionState
+            json = JsonUtility.ToJson(list);
+            SessionState.SetString(PENDING_ATTACHMENTS_KEY, json);
+            
+            Debug.Log($"[UIManagement] 已保存待绑定项，当前共有 {list.items.Count} 个");
+            Debug.Log($"[UIManagement] SessionState 数据: {json}");
+        }
+        
+        /// <summary>
+        /// 获取并清空待绑定列表
+        /// </summary>
+        private static List<PendingAttachment> GetAndClearPendingAttachments()
+        {
+            var json = SessionState.GetString(PENDING_ATTACHMENTS_KEY, "");
+            SessionState.EraseString(PENDING_ATTACHMENTS_KEY);
+            
+            if (string.IsNullOrEmpty(json))
+            {
+                return new List<PendingAttachment>();
+            }
+            
+            try
+            {
+                var list = JsonUtility.FromJson<PendingAttachmentList>(json);
+                return list?.items ?? new List<PendingAttachment>();
+            }
+            catch
+            {
+                return new List<PendingAttachment>();
+            }
+        }
+        
+        /// <summary>
+        /// 尝试立即绑定脚本
+        /// </summary>
+        private bool TryAttachScriptImmediately(string prefabPath, string typeName)
+        {
+            var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+            System.Type scriptType = null;
+            
+            foreach (var assembly in assemblies)
+            {
+                scriptType = assembly.GetType(typeName);
+                if (scriptType != null) break;
+            }
+            
+            if (scriptType != null)
+            {
+                AttachScriptToPrefab(prefabPath, typeName);
+                return true;
+            }
+            
+            return false;
+        }
+        
+        /// <summary>
+        /// 程序集重载后的回调（编辑器启动和每次编译后都会执行）
+        /// </summary>
+        [InitializeOnLoadMethod]
+        private static void OnAfterAssemblyReload()
+        {
+            // 从 SessionState 读取待绑定列表
+            var pendingList = GetAndClearPendingAttachments();
+            
+            if (pendingList == null || pendingList.Count == 0)
+            {
+                return;
+            }
+            
+            Debug.Log($"[UIManagement] 程序集已重载，开始处理待绑定列表，数量: {pendingList.Count}");
+            
+            // 延迟一帧执行，确保所有程序集完全加载
+            EditorApplication.delayCall += () =>
+            {
+                // 处理所有待绑定的脚本
+                var processedCount = 0;
+                var failedCount = 0;
+                
+                foreach (var item in pendingList)
+                {
+                    Debug.Log($"[UIManagement] 正在处理: {item.typeName}");
+                    
+                    var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+                    System.Type scriptType = null;
+                    
+                    foreach (var assembly in assemblies)
+                    {
+                        scriptType = assembly.GetType(item.typeName);
+                        if (scriptType != null)
+                        {
+                            Debug.Log($"[UIManagement] 在程序集 {assembly.GetName().Name} 中找到类型");
+                            break;
+                        }
+                    }
+                    
+                    if (scriptType != null)
+                    {
+                        try
+                        {
+                            Debug.Log($"[UIManagement] 加载预制体: {item.prefabPath}");
+                            var prefabRoot = PrefabUtility.LoadPrefabContents(item.prefabPath);
+                            var existingComponent = prefabRoot.GetComponent(scriptType);
+                            
+                            if (existingComponent == null)
+                            {
+                                prefabRoot.AddComponent(scriptType);
+                                PrefabUtility.SaveAsPrefabAsset(prefabRoot, item.prefabPath);
+                                Debug.Log($"[UIManagement] ✓ 成功绑定脚本 {item.typeName} 到预制体");
+                                processedCount++;
+                            }
+                            else
+                            {
+                                Debug.Log($"[UIManagement] 预制体已存在组件 {item.typeName}");
+                                processedCount++;
+                            }
+                            
+                            PrefabUtility.UnloadPrefabContents(prefabRoot);
+                        }
+                        catch (System.Exception ex)
+                        {
+                            Debug.LogError($"[UIManagement] ✗ 绑定脚本失败 {item.typeName}: {ex.Message}");
+                            failedCount++;
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogError($"[UIManagement] ✗ 程序集重载后仍找不到类型: {item.typeName}");
+                        failedCount++;
+                    }
+                }
+                
+                Debug.Log($"[UIManagement] 待绑定列表处理完成 - 成功: {processedCount}, 失败: {failedCount}");
+            };
         }
         
         /// <summary>
@@ -1055,6 +1154,62 @@ namespace Framework.Editor.UI
         {
             try
             {
+                Debug.Log($"[UIManagement] 尝试绑定脚本: {typeName} 到 {prefabPath}");
+                
+                var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
+                System.Type scriptType = null;
+                
+                foreach (var assembly in assemblies)
+                {
+                    scriptType = assembly.GetType(typeName);
+                    if (scriptType != null)
+                    {
+                        Debug.Log($"[UIManagement] 在程序集 {assembly.GetName().Name} 中找到类型: {typeName}");
+                        break;
+                    }
+                }
+                
+                if (scriptType == null)
+                {
+                    Debug.LogError($"[UIManagement] 找不到脚本类型: {typeName}，请检查：\n" +
+                                   $"1. 脚本是否编译成功\n" +
+                                   $"2. 命名空间和类名是否正确\n" +
+                                   $"3. 脚本文件路径: {prefabPath}");
+                    return;
+                }
+                
+                var prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
+                var existingComponent = prefabRoot.GetComponent(scriptType);
+                
+                if (existingComponent == null)
+                {
+                    prefabRoot.AddComponent(scriptType);
+                    PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
+                    Debug.Log($"[UIManagement] 成功绑定脚本 {typeName} 到预制体");
+                }
+                else
+                {
+                    Debug.Log($"[UIManagement] 预制体已存在组件 {typeName}，跳过绑定");
+                }
+                
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[UIManagement] 绑定脚本失败: {ex.Message}\n{ex.StackTrace}");
+            }
+        }
+        
+        /// <summary>
+        /// 从Prefab移除脚本组件
+        /// </summary>
+        private void RemoveScriptFromPrefab(GameObject prefab, string typeName)
+        {
+            try
+            {
+                var prefabPath = AssetDatabase.GetAssetPath(prefab);
+                Debug.Log($"[UIManagement] 尝试从预制体移除脚本: {typeName}");
+                
                 var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
                 System.Type scriptType = null;
                 
@@ -1064,22 +1219,31 @@ namespace Framework.Editor.UI
                     if (scriptType != null) break;
                 }
                 
-                if (scriptType == null) return;
+                if (scriptType == null)
+                {
+                    Debug.LogWarning($"[UIManagement] 未找到类型 {typeName}，可能已被删除或未编译");
+                    return;
+                }
                 
                 var prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
-                var existingComponent = prefabRoot.GetComponent(scriptType);
+                var component = prefabRoot.GetComponent(scriptType);
                 
-                if (existingComponent == null)
+                if (component != null)
                 {
-                    prefabRoot.AddComponent(scriptType);
+                    Object.DestroyImmediate(component, true);
                     PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
+                    Debug.Log($"[UIManagement] 成功从预制体移除脚本 {typeName}");
+                }
+                else
+                {
+                    Debug.Log($"[UIManagement] 预制体上不存在组件 {typeName}");
                 }
                 
                 PrefabUtility.UnloadPrefabContents(prefabRoot);
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[UIManagement] 绑定脚本失败: {ex.Message}");
+                Debug.LogError($"[UIManagement] 移除脚本失败: {ex.Message}");
             }
         }
         
@@ -1264,21 +1428,8 @@ namespace Framework.Editor.UI
         {
             try
             {
-                // 步骤1: 扫描Prefab
-                var scanResult = UIPrefabScanner.ScanPrefab(prefab);
-                
-                if (scanResult.HasErrors)
-                {
-                    var errorMsg = string.Join("\n", scanResult.Errors);
-                    Debug.LogWarning($"[UIManagement] {uiName} Prefab扫描有警告：\n{errorMsg}");
-                }
-                
-                // 生成资源路径
-                var resourcePath = GetResourcePath(prefabPath);
-                
-                // 步骤2: 生成代码
-                var bindingCode = UICodeTemplate.GenerateBindingCode(uiName, _namespace, scanResult.Components, prefabPath);
-                var logicCode = UICodeTemplate.GenerateLogicCode(uiName, _namespace, scanResult.Components, resourcePath);
+                // 生成代码
+                var logicCode = UICodeTemplate.GenerateLogicCode(uiName, _namespace);
                 
                 // 确保目录存在
                 if (!Directory.Exists(_logicOutputPath))
@@ -1286,25 +1437,18 @@ namespace Framework.Editor.UI
                     Directory.CreateDirectory(_logicOutputPath);
                 }
                 
-                if (!Directory.Exists(_bindingOutputPath))
-                {
-                    Directory.CreateDirectory(_bindingOutputPath);
-                }
-                
                 var logicFilePath = Path.Combine(_logicOutputPath, $"{uiName}.cs");
-                var bindingFilePath = Path.Combine(_bindingOutputPath, $"{uiName}.Binding.cs");
                 
-                // 步骤3: 写入文件
-                File.WriteAllText(bindingFilePath, bindingCode);
+                // 写入文件
                 File.WriteAllText(logicFilePath, logicCode);
                 
                 Debug.Log($"[UIManagement] {uiName} 脚本已生成");
                 
-                // 步骤4: 刷新并等待编译
+                // 刷新并等待编译
                 AssetDatabase.Refresh();
                 AssetDatabase.SaveAssets();
                 
-                // 步骤5: 等待编译完成后绑定脚本到预制体
+                // 等待编译完成后绑定脚本到预制体
                 WaitForCompilationAndAttach(prefab, uiName, _namespace);
             }
             catch (System.Exception ex)
@@ -1386,11 +1530,9 @@ namespace Framework.Editor.UI
             public string UIName;
             
             public bool LogicFileExists;
-            public bool BindingFileExists;
             public bool ConfigExists;
             
             public string LogicFilePath;
-            public string BindingFilePath;
             
             public string LayerName;
             public UIInstanceStrategy InstanceStrategy = UIInstanceStrategy.Singleton;
@@ -1406,6 +1548,25 @@ namespace Framework.Editor.UI
         Partial,        // 部分创建
         Created,        // 已创建
         PrefabMissing   // Prefab丢失（仅配置存在）
+    }
+    
+    /// <summary>
+    /// 待绑定项（可序列化）
+    /// </summary>
+    [System.Serializable]
+    public class PendingAttachment
+    {
+        public string prefabPath;
+        public string typeName;
+    }
+    
+    /// <summary>
+    /// 待绑定列表（可序列化）
+    /// </summary>
+    [System.Serializable]
+    public class PendingAttachmentList
+    {
+        public List<PendingAttachment> items = new List<PendingAttachment>();
     }
 }
 #endif

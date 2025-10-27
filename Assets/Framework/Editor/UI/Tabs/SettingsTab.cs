@@ -14,7 +14,6 @@ namespace Framework.Editor.UI
         private UIManagerSettings _settings;
         private string _defaultNamespace;
         private string _logicOutputPath;
-        private string _bindingOutputPath;
         private UIProjectConfig _currentConfig;
         private UIManagerWindow _parentWindow;
         
@@ -29,7 +28,6 @@ namespace Framework.Editor.UI
             {
                 _defaultNamespace = _settings.DefaultNamespace;
                 _logicOutputPath = _settings.LogicScriptOutputPath;
-                _bindingOutputPath = _settings.BindingScriptOutputPath;
             }
             
             // 加载UI项目配置
@@ -414,23 +412,8 @@ namespace Framework.Editor.UI
             }
             EditorGUILayout.EndHorizontal();
             
-            // 绑定脚本输出路径
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("绑定脚本路径:", GUILayout.Width(120));
-            _bindingOutputPath = EditorGUILayout.TextField(_bindingOutputPath);
-            if (GUILayout.Button("浏览", GUILayout.Width(60)))
-            {
-                var path = EditorUtility.OpenFolderPanel("选择绑定脚本输出目录", _bindingOutputPath, "");
-                if (!string.IsNullOrEmpty(path) && path.StartsWith(UnityEngine.Application.dataPath))
-                {
-                    _bindingOutputPath = "Assets" + path.Substring(UnityEngine.Application.dataPath.Length);
-                }
-            }
-            EditorGUILayout.EndHorizontal();
-            
             EditorGUILayout.HelpBox(
-                "逻辑脚本：业务代码（.cs），仅首次生成\n" +
-                "绑定脚本：自动生成代码（.Binding.cs），每次覆盖",
+                "逻辑脚本路径：UI业务代码（.cs）输出位置",
                 MessageType.Info
             );
             
@@ -462,7 +445,6 @@ namespace Framework.Editor.UI
         {
             _settings.DefaultNamespace = _defaultNamespace;
             _settings.LogicScriptOutputPath = _logicOutputPath;
-            _settings.BindingScriptOutputPath = _bindingOutputPath;
             _settings.Save();
             
             // 保存配置数据（触发代码生成）
@@ -485,11 +467,6 @@ namespace Framework.Editor.UI
         public string GetLogicOutputPath()
         {
             return _logicOutputPath;
-        }
-        
-        public string GetBindingOutputPath()
-        {
-            return _bindingOutputPath;
         }
         
         public UIProjectConfig GetCurrentConfig()

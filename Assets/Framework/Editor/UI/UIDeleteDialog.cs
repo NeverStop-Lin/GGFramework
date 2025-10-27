@@ -11,7 +11,6 @@ namespace Framework.Editor.UI
     {
         public bool DeletePrefab;
         public bool DeleteLogicScript;
-        public bool DeleteBindingScript;
         public bool DeleteConfig;
         public bool Confirmed;
     }
@@ -25,12 +24,10 @@ namespace Framework.Editor.UI
         private string _uiName;
         private bool _prefabExists;
         private bool _logicExists;
-        private bool _bindingExists;
         private bool _configExists;
         
         private bool _deletePrefab = false;
         private bool _deleteLogic = true;
-        private bool _deleteBinding = true;
         private bool _deleteConfig = true;
         private bool _shouldClose = false;
         
@@ -39,25 +36,23 @@ namespace Framework.Editor.UI
         /// <summary>
         /// 显示删除对话框
         /// </summary>
-        public static UIDeleteOptions Show(string uiName, bool prefabExists, bool logicExists, bool bindingExists, bool configExists)
+        public static UIDeleteOptions Show(string uiName, bool prefabExists, bool logicExists, bool configExists)
         {
             _result = null;
             
             var window = GetWindow<UIDeleteDialog>(true, "删除UI", true);
-            window.minSize = new Vector2(450, 380);
-            window.maxSize = new Vector2(450, 380);
+            window.minSize = new Vector2(450, 330);
+            window.maxSize = new Vector2(450, 330);
             
             // 初始化数据
             window._uiName = uiName;
             window._prefabExists = prefabExists;
             window._logicExists = logicExists;
-            window._bindingExists = bindingExists;
             window._configExists = configExists;
             
             // 默认选项：代码和配置都删除，预制体不删除
             window._deletePrefab = false;
             window._deleteLogic = logicExists;
-            window._deleteBinding = bindingExists;
             window._deleteConfig = configExists;
             window._shouldClose = false;
             
@@ -119,16 +114,6 @@ namespace Framework.Editor.UI
             
             EditorGUILayout.Space(3);
             
-            // 绑定脚本选项
-            GUI.enabled = _bindingExists;
-            _deleteBinding = EditorGUILayout.ToggleLeft(
-                _bindingExists ? "绑定脚本 (Binding.cs)" : "绑定脚本 (不存在)",
-                _deleteBinding
-            );
-            GUI.enabled = true;
-            
-            EditorGUILayout.Space(3);
-            
             // 配置选项
             GUI.enabled = _configExists;
             _deleteConfig = EditorGUILayout.ToggleLeft(
@@ -148,21 +133,18 @@ namespace Framework.Editor.UI
             {
                 _deletePrefab = _prefabExists;
                 _deleteLogic = _logicExists;
-                _deleteBinding = _bindingExists;
                 _deleteConfig = _configExists;
             }
             if (GUILayout.Button("全不选", GUILayout.Height(25)))
             {
                 _deletePrefab = false;
                 _deleteLogic = false;
-                _deleteBinding = false;
                 _deleteConfig = false;
             }
             if (GUILayout.Button("仅代码", GUILayout.Height(25)))
             {
                 _deletePrefab = false;
                 _deleteLogic = _logicExists;
-                _deleteBinding = _bindingExists;
                 _deleteConfig = false;
             }
             EditorGUILayout.EndHorizontal();
@@ -208,7 +190,7 @@ namespace Framework.Editor.UI
         private void OnConfirm()
         {
             // 检查是否至少选择了一项
-            if (!_deletePrefab && !_deleteLogic && !_deleteBinding && !_deleteConfig)
+            if (!_deletePrefab && !_deleteLogic && !_deleteConfig)
             {
                 EditorUtility.DisplayDialog("提示", "请至少选择一项要删除的内容", "确定");
                 return;
@@ -220,7 +202,6 @@ namespace Framework.Editor.UI
             {
                 DeletePrefab = _deletePrefab && _prefabExists,
                 DeleteLogicScript = _deleteLogic && _logicExists,
-                DeleteBindingScript = _deleteBinding && _bindingExists,
                 DeleteConfig = _deleteConfig && _configExists,
                 Confirmed = true
             };
