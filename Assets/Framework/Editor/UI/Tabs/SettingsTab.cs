@@ -50,6 +50,8 @@ namespace Framework.Editor.UI
             EditorGUILayout.Space(10);
             DrawCanvasSettingsSection();
             EditorGUILayout.Space(10);
+            DrawUICreationSection();
+            EditorGUILayout.Space(10);
             DrawCodeGenSection();
             EditorGUILayout.Space(10);
             DrawSaveSection();
@@ -218,6 +220,57 @@ namespace Framework.Editor.UI
             LoadConfig();
             
             EditorUtility.DisplayDialog("成功", $"已切换到:\n{relativePath}", "确定");
+        }
+        
+        private void DrawUICreationSection()
+        {
+            EditorGUILayout.LabelField("UI创建设置", EditorStyles.boldLabel);
+            
+            EditorGUILayout.BeginVertical("box");
+            
+            if (_settings != null)
+            {
+                // UI创建默认路径
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("默认创建路径:", GUILayout.Width(120));
+                
+                var oldColor = GUI.backgroundColor;
+                GUI.backgroundColor = new Color(0.8f, 1f, 0.8f);
+                EditorGUILayout.TextField(_settings.UIPrefabCreationDefaultPath);
+                GUI.backgroundColor = oldColor;
+                
+                if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                {
+                    var path = EditorUtility.OpenFolderPanel("选择UI创建默认目录", _settings.UIPrefabCreationDefaultPath, "");
+                    if (!string.IsNullOrEmpty(path) && path.StartsWith(UnityEngine.Application.dataPath))
+                    {
+                        var relativePath = "Assets" + path.Substring(UnityEngine.Application.dataPath.Length);
+                        _settings.UIPrefabCreationDefaultPath = relativePath;
+                        
+                        // 确保添加到Prefab目录列表
+                        if (!_settings.PrefabDirectories.Contains(relativePath))
+                        {
+                            _settings.PrefabDirectories.Add(relativePath);
+                        }
+                        
+                        _settings.Save();
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.HelpBox(
+                    "💡 此路径用于创建新UI预制体时的默认保存位置\n" +
+                    "• 该路径会自动添加到Prefab目录列表中\n" +
+                    "• 在UI管理Tab中，此路径标记为[默认创建路径]且不可删除",
+                    MessageType.Info
+                );
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("未加载编辑器设置", MessageType.Warning);
+            }
+            
+            EditorGUILayout.EndVertical();
         }
         
         private void DrawCanvasSettingsSection()

@@ -27,6 +27,9 @@ namespace Framework.Editor.UI
         private string _logicOutputPath = "Assets/Game/Scripts/UI";
         private string _bindingOutputPath = "Assets/Game/Scripts/UI/Generated";
         
+        // 延迟刷新标记
+        private bool _needRefresh = false;
+        
         public void OnEnable()
         {
             LoadConfig();
@@ -36,6 +39,13 @@ namespace Framework.Editor.UI
         
         public void OnGUI()
         {
+            // 处理延迟刷新
+            if (_needRefresh)
+            {
+                _needRefresh = false;
+                ScanPrefabs();
+            }
+            
             EditorGUILayout.LabelField("UI管理", EditorStyles.boldLabel);
             EditorGUILayout.Space();
             
@@ -237,18 +247,32 @@ namespace Framework.Editor.UI
             {
                 for (int i = 0; i < _settings.PrefabDirectories.Count; i++)
                 {
+                    var directory = _settings.PrefabDirectories[i];
+                    var isDefaultCreationPath = directory == _settings.UIPrefabCreationDefaultPath;
+                    
                     EditorGUILayout.BeginHorizontal();
                     
                     EditorGUILayout.LabelField($"{i + 1}.", GUILayout.Width(25));
-                    EditorGUILayout.LabelField(_settings.PrefabDirectories[i]);
+                    EditorGUILayout.LabelField(directory);
                     
+                    // 如果是默认创建路径，显示标签且不允许删除
+                    if (isDefaultCreationPath)
+                    {
+                        var oldColor = GUI.backgroundColor;
+                        GUI.backgroundColor = new Color(0.8f, 1f, 0.8f);
+                        GUILayout.Label("[默认创建路径]", EditorStyles.helpBox, GUILayout.Width(100));
+                        GUI.backgroundColor = oldColor;
+                    }
+                    else
+                    {
                     if (GUILayout.Button("删除", GUILayout.Width(60)))
                     {
                         EditorGUILayout.EndHorizontal();
                         _settings.PrefabDirectories.RemoveAt(i);
                         _settings.Save();
-                        ScanPrefabs(); // 重新扫描
+                        _needRefresh = true; // 延迟刷新
                         break;
+                    }
                     }
                     
                     EditorGUILayout.EndHorizontal();
@@ -265,6 +289,7 @@ namespace Framework.Editor.UI
             if (GUILayout.Button("添加目录", GUILayout.Width(100)))
             {
                 AddDirectory();
+                _needRefresh = true; // 延迟刷新
             }
             
             GUILayout.FlexibleSpace();
@@ -280,6 +305,16 @@ namespace Framework.Editor.UI
             EditorGUILayout.LabelField($"共 {_prefabInfos.Count} 个UI Prefab", EditorStyles.boldLabel);
             
             GUILayout.FlexibleSpace();
+            
+            // 创建UI预制体按钮（醒目的绿色样式）
+            var oldColor = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.5f, 1f, 0.5f);
+            if (GUILayout.Button("✚ 创建UI预制体", GUILayout.Width(120), GUILayout.Height(25)))
+            {
+                // 延迟调用，避免打断当前GUI布局
+                EditorApplication.delayCall += CreateNewUIPrefab;
+            }
+            GUI.backgroundColor = oldColor;
             
             if (GUILayout.Button("刷新列表", GUILayout.Width(80)))
             {
@@ -312,7 +347,7 @@ namespace Framework.Editor.UI
                     {
                         _settings.PrefabDirectories.Add(path);
                         _settings.Save();
-                        ScanPrefabs(); // 重新扫描
+                        // 不在这里扫描，由调用者设置 _needRefresh
                     }
                     else
                     {
@@ -407,7 +442,9 @@ namespace Framework.Editor.UI
             // 删除按钮
             if (GUILayout.Button("删除", GUILayout.Width(60)))
             {
-                DeleteUI(info);
+                // 延迟调用，避免打断当前GUI布局
+                var infoToDelete = info;
+                EditorApplication.delayCall += () => DeleteUI(infoToDelete);
             }
             
             EditorGUILayout.EndHorizontal();
@@ -545,7 +582,8 @@ namespace Framework.Editor.UI
             
             if (GUILayout.Button("批量删除", GUILayout.Width(100)))
             {
-                BatchDelete();
+                // 延迟调用，避免打断当前GUI布局
+                EditorApplication.delayCall += BatchDelete;
             }
             
             GUI.enabled = true;
@@ -658,7 +696,7 @@ namespace Framework.Editor.UI
                 AssetDatabase.SaveAssets();
                 
                 // 更新配置
-                UpdateUIConfig(info);
+                UpdateUIConfig(info, info.LayerName);
                 
                 // 等待编译并绑定脚本
                 WaitForCompilationAndAttach(info.Prefab, info.UIName, _namespace);
@@ -716,7 +754,7 @@ namespace Framework.Editor.UI
         /// <summary>
         /// 更新UI配置
         /// </summary>
-        private void UpdateUIConfig(UIPrefabInfo info)
+        private void UpdateUIConfig(UIPrefabInfo info, string layerName)
         {
             if (_config == null) return;
             
@@ -726,7 +764,7 @@ namespace Framework.Editor.UI
             {
                 UIName = info.UIName,
                 ResourcePath = resourcePath,
-                LayerName = info.LayerName,
+                LayerName = layerName,
                 CacheStrategy = UICacheStrategy.AlwaysCache,
                 Preload = false,
                 UseMask = false,
@@ -740,63 +778,108 @@ namespace Framework.Editor.UI
         }
         
         /// <summary>
+        /// 更新UI配置（创建新UI时使用）
+        /// </summary>
+        private void UpdateUIConfig(string uiName, string prefabPath, string layerName)
+        {
+            if (_config == null) return;
+            
+            var resourcePath = GetResourcePath(prefabPath);
+            
+            var uiConfig = new UIInstanceConfig
+            {
+                UIName = uiName,
+                ResourcePath = resourcePath,
+                LayerName = layerName,
+                CacheStrategy = UICacheStrategy.AlwaysCache,
+                Preload = false,
+                UseMask = false,
+                InstanceStrategy = UIInstanceStrategy.Singleton
+            };
+            
+            _config.AddOrUpdateUIConfig(uiConfig);
+            
+            // 保存配置（触发代码生成）
+            UIProjectConfigEditorHelper.SaveConfig(_config);
+        }
+        
+        /// <summary>
         /// 删除UI
         /// </summary>
         private void DeleteUI(UIPrefabInfo info)
         {
-            var choice = EditorUtility.DisplayDialogComplex(
-                "删除确认",
-                $"如何删除 {info.UIName}？\n\n" +
-                $"逻辑脚本: {(info.LogicFileExists ? "✓" : "✗")}\n" +
-                $"绑定脚本: {(info.BindingFileExists ? "✓" : "✗")}\n" +
-                $"配置: {(info.ConfigExists ? "✓" : "✗")}",
-                "删除文件+配置",
-                "取消",
-                "仅删除配置"
+            // 显示删除选项对话框
+            var deleteOptions = UIDeleteDialog.Show(
+                info.UIName,
+                info.Prefab != null,
+                info.LogicFileExists,
+                info.BindingFileExists,
+                info.ConfigExists
             );
             
-            if (choice == 1) // 取消
+            if (deleteOptions == null || !deleteOptions.Confirmed)
             {
-                return;
+                return; // 用户取消
             }
             
             try
             {
-                if (choice == 0) // 删除文件+配置
+                var deletedItems = new System.Collections.Generic.List<string>();
+                
+                // 删除预制体
+                if (deleteOptions.DeletePrefab && info.Prefab != null)
                 {
-                    // 删除文件
-                    if (info.LogicFileExists && File.Exists(info.LogicFilePath))
+                    var prefabPath = AssetDatabase.GetAssetPath(info.Prefab);
+                    if (!string.IsNullOrEmpty(prefabPath) && File.Exists(prefabPath))
                     {
-                        File.Delete(info.LogicFilePath);
+                        AssetDatabase.DeleteAsset(prefabPath);
+                        deletedItems.Add("预制体");
+                    }
+                }
+                
+                // 删除逻辑脚本
+                if (deleteOptions.DeleteLogicScript && info.LogicFileExists && File.Exists(info.LogicFilePath))
+                {
+                    File.Delete(info.LogicFilePath);
+                    if (File.Exists(info.LogicFilePath + ".meta"))
+                    {
                         File.Delete(info.LogicFilePath + ".meta");
                     }
-                    
-                    if (info.BindingFileExists && File.Exists(info.BindingFilePath))
+                    deletedItems.Add("逻辑脚本");
+                }
+                
+                // 删除绑定脚本
+                if (deleteOptions.DeleteBindingScript && info.BindingFileExists && File.Exists(info.BindingFilePath))
+                {
+                    File.Delete(info.BindingFilePath);
+                    if (File.Exists(info.BindingFilePath + ".meta"))
                     {
-                        File.Delete(info.BindingFilePath);
                         File.Delete(info.BindingFilePath + ".meta");
                     }
-                    
-                    AssetDatabase.Refresh();
+                    deletedItems.Add("绑定脚本");
                 }
                 
-                // 删除配置（choice == 0 或 choice == 2）
-                if (info.ConfigExists)
+                // 删除配置
+                if (deleteOptions.DeleteConfig && info.ConfigExists)
                 {
                     _config.RemoveUIConfig(info.UIName);
-                    
-                    // 保存配置（触发代码生成）
                     UIProjectConfigEditorHelper.SaveConfig(_config);
+                    deletedItems.Add("配置");
                 }
                 
-                // 刷新列表
-                ScanPrefabs();
+                // 刷新资源
+                AssetDatabase.Refresh();
                 
-                _statusMessage = $"已删除 {info.UIName}";
+                // 延迟刷新列表（避免在GUI绘制中刷新）
+                _needRefresh = true;
+                
+                _statusMessage = $"已删除 {info.UIName} 的 {string.Join("、", deletedItems)}";
+                Debug.Log($"[UIManagement] {_statusMessage}");
             }
             catch (System.Exception ex)
             {
                 _statusMessage = $"删除失败: {ex.Message}";
+                Debug.LogError($"[UIManagement] {_statusMessage}");
                 EditorUtility.DisplayDialog("删除失败", ex.Message, "确定");
             }
         }
@@ -841,18 +924,29 @@ namespace Framework.Editor.UI
         {
             var selectedInfos = _selectedIndices.Select(i => _prefabInfos[i]).ToList();
             
-            var choice = EditorUtility.DisplayDialogComplex(
-                "批量删除确认",
-                $"如何删除以下 {selectedInfos.Count} 个UI？\n\n" +
-                string.Join("\n", selectedInfos.Select(i => $"• {i.UIName}")),
-                "删除文件+配置",
-                "取消",
-                "仅删除配置"
-            );
-            
-            if (choice == 1) // 取消
+            if (selectedInfos.Count == 0)
             {
                 return;
+            }
+            
+            // 统计存在的内容
+            var hasPrefab = selectedInfos.Any(i => i.Prefab != null);
+            var hasLogic = selectedInfos.Any(i => i.LogicFileExists);
+            var hasBinding = selectedInfos.Any(i => i.BindingFileExists);
+            var hasConfig = selectedInfos.Any(i => i.ConfigExists);
+            
+            // 显示统一的删除选项对话框（使用第一个UI的名称作为标题提示）
+            var deleteOptions = UIDeleteDialog.Show(
+                $"{selectedInfos.Count} 个UI",
+                hasPrefab,
+                hasLogic,
+                hasBinding,
+                hasConfig
+            );
+            
+            if (deleteOptions == null || !deleteOptions.Confirmed)
+            {
+                return; // 用户取消
             }
             
             var successCount = 0;
@@ -862,23 +956,38 @@ namespace Framework.Editor.UI
             {
                 try
                 {
-                    if (choice == 0) // 删除文件+配置
+                    // 删除预制体
+                    if (deleteOptions.DeletePrefab && info.Prefab != null)
                     {
-                        if (info.LogicFileExists && File.Exists(info.LogicFilePath))
+                        var prefabPath = AssetDatabase.GetAssetPath(info.Prefab);
+                        if (!string.IsNullOrEmpty(prefabPath))
                         {
-                            File.Delete(info.LogicFilePath);
+                            AssetDatabase.DeleteAsset(prefabPath);
+                        }
+                    }
+                    
+                    // 删除逻辑脚本
+                    if (deleteOptions.DeleteLogicScript && info.LogicFileExists && File.Exists(info.LogicFilePath))
+                    {
+                        File.Delete(info.LogicFilePath);
+                        if (File.Exists(info.LogicFilePath + ".meta"))
+                        {
                             File.Delete(info.LogicFilePath + ".meta");
                         }
-                        
-                        if (info.BindingFileExists && File.Exists(info.BindingFilePath))
+                    }
+                    
+                    // 删除绑定脚本
+                    if (deleteOptions.DeleteBindingScript && info.BindingFileExists && File.Exists(info.BindingFilePath))
+                    {
+                        File.Delete(info.BindingFilePath);
+                        if (File.Exists(info.BindingFilePath + ".meta"))
                         {
-                            File.Delete(info.BindingFilePath);
                             File.Delete(info.BindingFilePath + ".meta");
                         }
                     }
                     
                     // 删除配置
-                    if (info.ConfigExists)
+                    if (deleteOptions.DeleteConfig && info.ConfigExists)
                     {
                         _config.RemoveUIConfig(info.UIName);
                     }
@@ -893,12 +1002,15 @@ namespace Framework.Editor.UI
             }
             
             // 保存配置（触发代码生成）
-            UIProjectConfigEditorHelper.SaveConfig(_config);
+            if (deleteOptions.DeleteConfig)
+            {
+                UIProjectConfigEditorHelper.SaveConfig(_config);
+            }
             
             AssetDatabase.Refresh();
             
-            // 刷新列表
-            ScanPrefabs();
+            // 延迟刷新列表（避免在GUI绘制中刷新）
+            _needRefresh = true;
             _selectedIndices.Clear();
             
             _statusMessage = $"批量删除完成：成功 {successCount} 个，失败 {errorCount} 个";
@@ -1018,6 +1130,249 @@ namespace Framework.Editor.UI
             }
             
             return assetPath.Replace("Assets/", "").Replace(".prefab", "");
+        }
+        
+        /// <summary>
+        /// 创建新的UI预制体
+        /// </summary>
+        private void CreateNewUIPrefab()
+        {
+            // 步骤1: 生成默认名称
+            var defaultName = GenerateDefaultUIName();
+            
+            // 步骤2: 获取默认目录
+            var defaultDirectory = _settings != null && !string.IsNullOrEmpty(_settings.UIPrefabCreationDefaultPath)
+                ? _settings.UIPrefabCreationDefaultPath
+                : "Assets/Game/Resources/UI";
+            
+            // 确保默认目录存在
+            if (!Directory.Exists(defaultDirectory))
+            {
+                Directory.CreateDirectory(defaultDirectory);
+            }
+            
+            // 步骤3: 显示创建对话框
+            var dialogData = UICreateDialog.Show(defaultName, defaultDirectory, _config?.LayerDefinitions);
+            
+            if (dialogData == null || !dialogData.Confirmed)
+            {
+                return; // 用户取消
+            }
+            
+            // 步骤4: 验证名称
+            if (!ValidateUIName(dialogData.UIName, out string errorMessage))
+            {
+                EditorUtility.DisplayDialog("名称无效", errorMessage, "确定");
+                return;
+            }
+            
+            // 步骤5: 验证目录
+            if (string.IsNullOrEmpty(dialogData.SaveDirectory))
+            {
+                EditorUtility.DisplayDialog("路径错误", "必须指定保存目录", "确定");
+                return;
+            }
+            
+            // 确保保存目录存在
+            if (!Directory.Exists(dialogData.SaveDirectory))
+            {
+                Directory.CreateDirectory(dialogData.SaveDirectory);
+            }
+            
+            // 步骤6: 验证模板
+            if (string.IsNullOrEmpty(dialogData.TemplatePath))
+            {
+                EditorUtility.DisplayDialog("错误", "未选择模板", "确定");
+                return;
+            }
+            
+            var uiName = dialogData.UIName;
+            var layerName = dialogData.LayerName;
+            var relativePath = Path.Combine(dialogData.SaveDirectory, $"{uiName}.prefab");
+            
+            // 步骤7: 加载模板
+            var templatePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(dialogData.TemplatePath);
+            
+            if (templatePrefab == null)
+            {
+                EditorUtility.DisplayDialog("错误", $"未找到UI模板：{dialogData.TemplatePath}", "确定");
+                return;
+            }
+            
+            // 步骤8: 实例化模板并应用配置
+            var instance = PrefabUtility.InstantiatePrefab(templatePrefab) as GameObject;
+            if (instance == null)
+            {
+                EditorUtility.DisplayDialog("错误", "实例化模板失败", "确定");
+                return;
+            }
+            
+            // 步骤9: 解除与模板的prefab关联（彻底断开，变成普通GameObject）
+            PrefabUtility.UnpackPrefabInstance(instance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            
+            // 重命名
+            instance.name = uiName;
+            
+            // 步骤10: 应用Canvas Scaler设置
+            var canvasScaler = instance.GetComponent<UnityEngine.UI.CanvasScaler>();
+            if (canvasScaler != null && _config != null)
+            {
+                canvasScaler.referenceResolution = new Vector2(
+                    _config.ReferenceResolutionWidth,
+                    _config.ReferenceResolutionHeight
+                );
+                canvasScaler.matchWidthOrHeight = _config.MatchWidthOrHeight;
+            }
+            
+            // 步骤11: 保存为全新的预制体（已无Base关联）
+            var newPrefab = PrefabUtility.SaveAsPrefabAsset(instance, relativePath);
+            
+            // 删除场景中的实例
+            Object.DestroyImmediate(instance);
+            
+            if (newPrefab != null)
+            {
+                // 刷新资源数据库
+                AssetDatabase.Refresh();
+                
+                // 步骤12: 更新配置
+                UpdateUIConfig(uiName, relativePath, layerName);
+                
+                // 步骤13: 生成脚本
+                GenerateUIScripts(newPrefab, uiName, relativePath);
+                
+                // 步骤14: 延迟刷新列表
+                _needRefresh = true;
+                
+                // 高亮显示新创建的预制体
+                EditorGUIUtility.PingObject(newPrefab);
+                Selection.activeObject = newPrefab;
+                
+                _statusMessage = $"✓ UI预制体 {uiName} 创建成功（含脚本）";
+                Debug.Log($"[UIManagement] UI预制体创建成功: {relativePath}");
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("失败", "创建预制体失败", "确定");
+            }
+        }
+        
+        /// <summary>
+        /// 生成UI脚本并绑定到预制体
+        /// </summary>
+        private void GenerateUIScripts(GameObject prefab, string uiName, string prefabPath)
+        {
+            try
+            {
+                // 步骤1: 扫描Prefab
+                var scanResult = UIPrefabScanner.ScanPrefab(prefab);
+                
+                if (scanResult.HasErrors)
+                {
+                    var errorMsg = string.Join("\n", scanResult.Errors);
+                    Debug.LogWarning($"[UIManagement] {uiName} Prefab扫描有警告：\n{errorMsg}");
+                }
+                
+                // 生成资源路径
+                var resourcePath = GetResourcePath(prefabPath);
+                
+                // 步骤2: 生成代码
+                var bindingCode = UICodeTemplate.GenerateBindingCode(uiName, _namespace, scanResult.Components, prefabPath);
+                var logicCode = UICodeTemplate.GenerateLogicCode(uiName, _namespace, scanResult.Components, resourcePath);
+                
+                // 确保目录存在
+                if (!Directory.Exists(_logicOutputPath))
+                {
+                    Directory.CreateDirectory(_logicOutputPath);
+                }
+                
+                if (!Directory.Exists(_bindingOutputPath))
+                {
+                    Directory.CreateDirectory(_bindingOutputPath);
+                }
+                
+                var logicFilePath = Path.Combine(_logicOutputPath, $"{uiName}.cs");
+                var bindingFilePath = Path.Combine(_bindingOutputPath, $"{uiName}.Binding.cs");
+                
+                // 步骤3: 写入文件
+                File.WriteAllText(bindingFilePath, bindingCode);
+                File.WriteAllText(logicFilePath, logicCode);
+                
+                Debug.Log($"[UIManagement] {uiName} 脚本已生成");
+                
+                // 步骤4: 刷新并等待编译
+                AssetDatabase.Refresh();
+                AssetDatabase.SaveAssets();
+                
+                // 步骤5: 等待编译完成后绑定脚本到预制体
+                WaitForCompilationAndAttach(prefab, uiName, _namespace);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[UIManagement] {uiName} 脚本生成失败: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 生成默认UI名称
+        /// </summary>
+        private string GenerateDefaultUIName()
+        {
+            // 查找当前所有UI名称中的数字后缀
+            int maxNumber = 0;
+            
+            foreach (var prefabInfo in _prefabInfos)
+            {
+                var name = prefabInfo.UIName;
+                
+                // 尝试匹配 UI_XXX 格式
+                if (name.StartsWith("UI_"))
+                {
+                    var numberPart = name.Substring(3);
+                    if (int.TryParse(numberPart, out int number))
+                    {
+                        if (number > maxNumber)
+                        {
+                            maxNumber = number;
+                        }
+                    }
+                }
+            }
+            
+            // 生成新名称
+            return $"UI_{(maxNumber + 1):D3}";
+        }
+        
+        /// <summary>
+        /// 验证UI名称
+        /// </summary>
+        private bool ValidateUIName(string name, out string errorMessage)
+        {
+            errorMessage = "";
+            
+            // 检查是否为空
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                errorMessage = "UI名称不能为空";
+                return false;
+            }
+            
+            // 检查是否符合C#命名规范
+            if (!System.Text.RegularExpressions.Regex.IsMatch(name, @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
+            {
+                errorMessage = "UI名称只能包含字母、数字、下划线，且不能以数字开头";
+                return false;
+            }
+            
+            // 检查是否与现有UI重名
+            var existingUI = _prefabInfos.FirstOrDefault(p => p.UIName == name);
+            if (existingUI != null)
+            {
+                errorMessage = $"UI名称 '{name}' 已存在";
+                return false;
+            }
+            
+            return true;
         }
     }
     

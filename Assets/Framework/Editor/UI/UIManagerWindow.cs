@@ -39,6 +39,9 @@ namespace Framework.Editor.UI
             // 确保配置代码文件存在（自动生成）
             EnsureConfigCodeExists();
             
+            // 确保UI模板存在
+            EnsureUITemplateExists();
+            
             // 初始化Tab
             _uiManagementTab = new UIManagementTab();
             _layerConfigTab = new LayerConfigTab();
@@ -73,6 +76,25 @@ namespace Framework.Editor.UI
                 AssetDatabase.CreateAsset(settings, settingsPath);
                 AssetDatabase.SaveAssets();
             }
+            
+            // 确保默认创建路径已添加到Prefab目录列表
+            if (!string.IsNullOrEmpty(settings.UIPrefabCreationDefaultPath))
+            {
+                if (!settings.PrefabDirectories.Contains(settings.UIPrefabCreationDefaultPath))
+                {
+                    settings.PrefabDirectories.Add(settings.UIPrefabCreationDefaultPath);
+                    EditorUtility.SetDirty(settings);
+                    AssetDatabase.SaveAssets();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 确保UI模板存在
+        /// </summary>
+        private void EnsureUITemplateExists()
+        {
+            UITemplateGenerator.EnsureTemplateExists();
         }
         
         /// <summary>
@@ -117,21 +139,27 @@ namespace Framework.Editor.UI
             // 滚动区域
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
             
-            // 显示当前Tab
-            switch (_currentTab)
+            try
             {
-                case 0:
-                    _uiManagementTab.OnGUI();
-                    break;
-                case 1:
-                    _layerConfigTab.OnGUI();
-                    break;
-                case 2:
-                    _settingsTab.OnGUI();
-                    break;
+                // 显示当前Tab
+                switch (_currentTab)
+                {
+                    case 0:
+                        _uiManagementTab?.OnGUI();
+                        break;
+                    case 1:
+                        _layerConfigTab?.OnGUI();
+                        break;
+                    case 2:
+                        _settingsTab?.OnGUI();
+                        break;
+                }
             }
-            
-            EditorGUILayout.EndScrollView();
+            finally
+            {
+                // 确保ScrollView总是正确结束
+                EditorGUILayout.EndScrollView();
+            }
         }
         
         /// <summary>

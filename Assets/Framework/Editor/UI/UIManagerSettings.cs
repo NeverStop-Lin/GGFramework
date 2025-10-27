@@ -27,6 +27,10 @@ namespace Framework.Editor.UI
         [Tooltip("生成代码后是否自动打开文件")]
         public bool OpenAfterGenerate = false;
         
+        [Header("UI创建设置")]
+        [Tooltip("创建UI预制体的默认路径（会强制添加到Prefab目录列表，不可删除）")]
+        public string UIPrefabCreationDefaultPath = "Assets/Game/Resources/UI";
+        
         [Header("Prefab扫描")]
         [Tooltip("常用的UI Prefab目录列表")]
         public System.Collections.Generic.List<string> PrefabDirectories = new System.Collections.Generic.List<string>

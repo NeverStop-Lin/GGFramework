@@ -1,7 +1,7 @@
 ﻿// ========================================
 // 自动生成的UI项目配置数据
 // 警告: 请勿手动修改此文件，所有修改将在重新生成时丢失
-// 生成时间: 2025-10-27 21:39:36
+// 生成时间: 2025-10-28 01:22:00
 // ========================================
 
 using System.Collections.Generic;
@@ -59,6 +59,12 @@ namespace Framework.Core
                     LayerName = "Top",
                     BaseSortingOrder = 2000,
                     Description = "顶层层级，用于始终显示在最上层的UI"
+                },
+                new UILayerDefinition
+                {
+                    LayerName = "Frame",
+                    BaseSortingOrder = 9900,
+                    Description = "框架级别"
                 },
             };
         }
