@@ -73,17 +73,11 @@ namespace Game.UI
         /// </summary>
         private async void OnContinueGameClick()
         {
-            Debug.Log("点击继续游戏");
-            
             // 显示确认对话框
-            var lifecycle = GridFramework.UI.Show<UI_002>();
-            // 等待用户操作并获取结果
-            var result = await lifecycle.HideTask;
-            
-            // 处理结果
-            if (result is bool confirmed && confirmed)
+            var isConfirmed = (bool)await GridFramework.UI.Show<ShowModalUI>().HideTask;
+            if (isConfirmed)
             {
-                Debug.Log("用户确认继续游戏");
+                GridFramework.UI.Show<ShowToastUI>("继续游戏");
                 if (_gameManager != null)
                 {
                     await Hide();
@@ -92,7 +86,7 @@ namespace Game.UI
             }
             else
             {
-                Debug.Log("用户取消了操作");
+                GridFramework.UI.Show<ShowToastUI>("取消继续游戏");
             }
         }
 
