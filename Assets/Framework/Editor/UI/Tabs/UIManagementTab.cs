@@ -1035,16 +1035,20 @@ namespace Framework.Editor.UI
         /// <summary>
         /// 等待编译完成并绑定脚本
         /// </summary>
-        private void WaitForCompilationAndAttach(GameObject prefab, string uiName, string namespaceName)
+        private void WaitForCompilationAndAttach(GameObject prefab, string uiName, string namespaceName, string templateClassName = null)
         {
             var prefabPath = AssetDatabase.GetAssetPath(prefab);
             var typeName = $"{namespaceName}.{uiName}";
             
             Debug.Log($"[UIManagement] 开始等待编译完成: {typeName}");
             Debug.Log($"[UIManagement] 预制体路径: {prefabPath}");
+            if (!string.IsNullOrEmpty(templateClassName))
+            {
+                Debug.Log($"[UIManagement] 需要替换模板组件: {templateClassName}");
+            }
             
             // 先尝试立即绑定（如果类型已存在）
-            if (TryAttachScriptImmediately(prefabPath, typeName))
+            if (TryAttachScriptImmediately(prefabPath, typeName, templateClassName))
             {
                 Debug.Log($"[UIManagement] 类型已存在，成功立即绑定");
                 return;
@@ -1052,13 +1056,13 @@ namespace Framework.Editor.UI
             
             // 类型不存在，保存到 SessionState 等待程序集重载后绑定
             Debug.Log($"[UIManagement] 类型尚未加载，保存到待绑定列表");
-            AddPendingAttachment(prefabPath, typeName);
+            AddPendingAttachment(prefabPath, typeName, templateClassName);
         }
         
         /// <summary>
         /// 添加待绑定项
         /// </summary>
-        private void AddPendingAttachment(string prefabPath, string typeName)
+        private void AddPendingAttachment(string prefabPath, string typeName, string templateClassName = null)
         {
             // 从 SessionState 读取现有列表
             var json = SessionState.GetString(PENDING_ATTACHMENTS_KEY, "");
@@ -1085,7 +1089,7 @@ namespace Framework.Editor.UI
             }
             
             // 添加新项
-            list.items.Add(new PendingAttachment { prefabPath = prefabPath, typeName = typeName });
+            list.items.Add(new PendingAttachment { prefabPath = prefabPath, typeName = typeName, templateClassName = templateClassName });
             
             // 保存回 SessionState
             json = JsonUtility.ToJson(list);
@@ -1122,7 +1126,7 @@ namespace Framework.Editor.UI
         /// <summary>
         /// 尝试立即绑定脚本
         /// </summary>
-        private bool TryAttachScriptImmediately(string prefabPath, string typeName)
+        private bool TryAttachScriptImmediately(string prefabPath, string typeName, string templateClassName = null)
         {
             var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
             System.Type scriptType = null;
@@ -1135,7 +1139,7 @@ namespace Framework.Editor.UI
             
             if (scriptType != null)
             {
-                AttachScriptToPrefab(prefabPath, typeName);
+                AttachScriptToPrefab(prefabPath, typeName, templateClassName);
                 return true;
             }
             
@@ -1192,7 +1196,38 @@ namespace Framework.Editor.UI
                             
                             if (existingComponent == null)
                             {
-                                prefabRoot.AddComponent(scriptType);
+                                MonoBehaviour templateComponent = null;
+                                
+                                // 如果有模板类名，先查找模板组件
+                                if (!string.IsNullOrEmpty(item.templateClassName))
+                                {
+                                    var components = prefabRoot.GetComponents<MonoBehaviour>();
+                                    foreach (var comp in components)
+                                    {
+                                        if (comp != null && comp.GetType().Name == item.templateClassName)
+                                        {
+                                            templateComponent = comp;
+                                            Debug.Log($"[UIManagement] 找到模板组件: {item.templateClassName}");
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                // 添加新组件
+                                var newComponent = prefabRoot.AddComponent(scriptType) as MonoBehaviour;
+                                
+                                // 如果找到模板组件，复制字段数据
+                                if (templateComponent != null && newComponent != null)
+                                {
+                                    Debug.Log($"[UIManagement] 正在复制字段数据从 {item.templateClassName} 到 {item.typeName}");
+                                    EditorUtility.CopySerialized(templateComponent, newComponent);
+                                    Debug.Log($"[UIManagement] 字段数据复制完成");
+                                    
+                                    // 删除模板组件
+                                    Object.DestroyImmediate(templateComponent);
+                                    Debug.Log($"[UIManagement] 已删除模板组件: {item.templateClassName}");
+                                }
+                                
                                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, item.prefabPath);
                                 Debug.Log($"[UIManagement] ✓ 成功绑定脚本 {item.typeName} 到预制体");
                                 processedCount++;
@@ -1225,7 +1260,7 @@ namespace Framework.Editor.UI
         /// <summary>
         /// 绑定脚本到Prefab
         /// </summary>
-        private void AttachScriptToPrefab(string prefabPath, string typeName)
+        private void AttachScriptToPrefab(string prefabPath, string typeName, string templateClassName = null)
         {
             try
             {
@@ -1258,7 +1293,38 @@ namespace Framework.Editor.UI
                 
                 if (existingComponent == null)
                 {
-                    prefabRoot.AddComponent(scriptType);
+                    MonoBehaviour templateComponent = null;
+                    
+                    // 如果有模板类名，先查找并保存模板组件
+                    if (!string.IsNullOrEmpty(templateClassName))
+                    {
+                        var components = prefabRoot.GetComponents<MonoBehaviour>();
+                        foreach (var comp in components)
+                        {
+                            if (comp != null && comp.GetType().Name == templateClassName)
+                            {
+                                templateComponent = comp;
+                                Debug.Log($"[UIManagement] 找到模板组件: {templateClassName}");
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // 添加新组件
+                    var newComponent = prefabRoot.AddComponent(scriptType) as MonoBehaviour;
+                    
+                    // 如果找到模板组件，复制字段数据
+                    if (templateComponent != null && newComponent != null)
+                    {
+                        Debug.Log($"[UIManagement] 正在复制字段数据从 {templateClassName} 到 {typeName}");
+                        EditorUtility.CopySerialized(templateComponent, newComponent);
+                        Debug.Log($"[UIManagement] 字段数据复制完成");
+                        
+                        // 删除模板组件
+                        Object.DestroyImmediate(templateComponent);
+                        Debug.Log($"[UIManagement] 已删除模板组件: {templateClassName}");
+                    }
+                    
                     PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
                     Debug.Log($"[UIManagement] 成功绑定脚本 {typeName} 到预制体");
                 }
@@ -1485,7 +1551,7 @@ namespace Framework.Editor.UI
                 canvasScaler.matchWidthOrHeight = _config.MatchWidthOrHeight;
             }
             
-            // 步骤11: 保存为全新的预制体（已无Base关联）
+            // 步骤11: 保存为全新的预制体（包含模板脚本，稍后会替换）
             var newPrefab = PrefabUtility.SaveAsPrefabAsset(instance, relativePath);
             
             // 删除场景中的实例
@@ -1503,8 +1569,14 @@ namespace Framework.Editor.UI
                 // 步骤13: 先更新配置（包含脚本路径）
                 UpdateUIConfig(uiName, relativePath, layerName, logicScriptPath);
                 
-                // 步骤14: 生成脚本
-                GenerateUIScripts(newPrefab, uiName, relativePath);
+                // 步骤14: 生成脚本（支持从模板代码复制）
+                // 提取模板类名用于后续删除
+                string templateClassName = null;
+                if (!string.IsNullOrEmpty(dialogData.TemplateCodePath))
+                {
+                    templateClassName = Path.GetFileNameWithoutExtension(dialogData.TemplateCodePath);
+                }
+                GenerateUIScriptsFromTemplate(newPrefab, uiName, relativePath, dialogData.TemplateCodePath, templateClassName);
                 
                 // 步骤15: 延迟刷新列表
                 _needRefresh = true;
@@ -1551,6 +1623,151 @@ namespace Framework.Editor.UI
                 
                 // 等待编译完成后绑定脚本到预制体
                 WaitForCompilationAndAttach(prefab, uiName, _namespace);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[UIManagement] {uiName} 脚本生成失败: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 移除预制体上的模板UI脚本组件
+        /// </summary>
+        private void RemoveTemplateScriptComponent(GameObject instance, string templateCodePath)
+        {
+            try
+            {
+                // 从模板代码路径提取类名
+                var templateClassName = Path.GetFileNameWithoutExtension(templateCodePath);
+                
+                if (string.IsNullOrEmpty(templateClassName))
+                {
+                    Debug.LogWarning($"[UIManagement] 无法从模板代码路径提取类名: {templateCodePath}");
+                    return;
+                }
+                
+                // 获取所有MonoBehaviour组件
+                var components = instance.GetComponents<MonoBehaviour>();
+                
+                foreach (var component in components)
+                {
+                    if (component == null) continue;
+                    
+                    // 检查组件的类型名是否匹配模板类名
+                    var componentTypeName = component.GetType().Name;
+                    
+                    if (componentTypeName == templateClassName)
+                    {
+                        Debug.Log($"[UIManagement] 移除模板脚本组件: {componentTypeName}");
+                        Object.DestroyImmediate(component);
+                        break;
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[UIManagement] 移除模板脚本组件失败: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 从模板代码生成新的UI代码（替换类名）
+        /// </summary>
+        private string GenerateCodeFromTemplate(string templateCodePath, string newUIName, string namespaceName)
+        {
+            try
+            {
+                // 读取模板代码
+                var templateCode = File.ReadAllText(templateCodePath);
+                
+                // 提取模板类名（查找 public class XXX）
+                var classNameMatch = System.Text.RegularExpressions.Regex.Match(
+                    templateCode, 
+                    @"public\s+class\s+(\w+)\s*:"
+                );
+                
+                if (!classNameMatch.Success)
+                {
+                    Debug.LogWarning($"[UIManagement] 无法从模板代码中提取类名，使用默认模板");
+                    return null;
+                }
+                
+                var templateClassName = classNameMatch.Groups[1].Value;
+                
+                // 替换类名（使用单词边界确保完整匹配）
+                var newCode = System.Text.RegularExpressions.Regex.Replace(
+                    templateCode,
+                    @"\b" + templateClassName + @"\b",
+                    newUIName
+                );
+                
+                // 替换命名空间
+                newCode = System.Text.RegularExpressions.Regex.Replace(
+                    newCode,
+                    @"namespace\s+[\w\.]+",
+                    $"namespace {namespaceName}"
+                );
+                
+                return newCode;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[UIManagement] 从模板代码生成失败: {ex.Message}");
+                return null;
+            }
+        }
+        
+        /// <summary>
+        /// 生成UI脚本（支持从模板代码复制）并绑定到预制体
+        /// </summary>
+        private void GenerateUIScriptsFromTemplate(GameObject prefab, string uiName, string prefabPath, string templateCodePath, string templateClassName)
+        {
+            try
+            {
+                string logicCode;
+                
+                // 如果有模板代码，从模板复制
+                if (!string.IsNullOrEmpty(templateCodePath) && File.Exists(templateCodePath))
+                {
+                    logicCode = GenerateCodeFromTemplate(templateCodePath, uiName, _namespace);
+                    
+                    // 如果模板代码生成失败，回退到默认模板
+                    if (string.IsNullOrEmpty(logicCode))
+                    {
+                        Debug.LogWarning($"[UIManagement] 使用默认模板生成 {uiName} 脚本");
+                        logicCode = UICodeTemplate.GenerateLogicCode(uiName, _namespace);
+                        templateClassName = null; // 没有模板组件需要删除
+                    }
+                    else
+                    {
+                        Debug.Log($"[UIManagement] {uiName} 脚本已从模板复制");
+                    }
+                }
+                else
+                {
+                    // 没有模板代码，使用默认模板
+                    logicCode = UICodeTemplate.GenerateLogicCode(uiName, _namespace);
+                    Debug.Log($"[UIManagement] {uiName} 脚本使用默认模板生成");
+                    templateClassName = null; // 没有模板组件需要删除
+                }
+                
+                // 确保目录存在
+                if (!Directory.Exists(_logicOutputPath))
+                {
+                    Directory.CreateDirectory(_logicOutputPath);
+                }
+                
+                var logicFilePath = Path.Combine(_logicOutputPath, $"{uiName}.cs");
+                
+                // 写入文件
+                File.WriteAllText(logicFilePath, logicCode);
+                
+                // 刷新并等待编译
+                AssetDatabase.Refresh();
+                AssetDatabase.SaveAssets();
+                
+                // 等待编译完成后绑定脚本到预制体，并传递模板类名用于删除旧组件
+                WaitForCompilationAndAttach(prefab, uiName, _namespace, templateClassName);
             }
             catch (System.Exception ex)
             {
@@ -1661,6 +1878,7 @@ namespace Framework.Editor.UI
     {
         public string prefabPath;
         public string typeName;
+        public string templateClassName; // 需要删除的模板组件类名
     }
     
     /// <summary>

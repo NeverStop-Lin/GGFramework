@@ -21,7 +21,7 @@ namespace Framework.Editor.UI
         // 刷新标记
         private bool _needRefresh = false;
         
-        [MenuItem("Tools/Framework/UI Manager")]
+        [MenuItem("Framework/UI Manager")]
         public static void ShowWindow()
         {
             var window = GetWindow<UIManagerWindow>("UI管理器");

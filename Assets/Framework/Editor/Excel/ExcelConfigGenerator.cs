@@ -15,7 +15,7 @@ namespace Framework.Editor.Excel
         private const string JSON_OUTPUT = "Assets/Resources/Configs/";
         private const string CSHARP_OUTPUT = "Assets/Generate/Scripts/Configs/";
 
-        [MenuItem("Tools/打开Excel目录")]
+        [MenuItem("Framework/Excel/打开Excel目录")]
         static void OpenExcelDirectory()
         {
             // 新增：打开Excel目录并选中
@@ -31,7 +31,7 @@ namespace Framework.Editor.Excel
             }
         }
 
-        [MenuItem("Tools/Excel导出")]
+        [MenuItem("Framework/Excel/Excel导出")]
         static void GenerateAll()
         {
             try

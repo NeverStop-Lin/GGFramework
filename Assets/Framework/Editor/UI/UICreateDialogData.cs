@@ -29,6 +29,11 @@ namespace Framework.Editor.UI
         public string TemplatePath;
         
         /// <summary>
+        /// 模板代码文件路径（可选）
+        /// </summary>
+        public string TemplateCodePath;
+        
+        /// <summary>
         /// 是否确认
         /// </summary>
         public bool Confirmed;

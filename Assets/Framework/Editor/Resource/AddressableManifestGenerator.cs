@@ -17,7 +17,7 @@ namespace Framework.Editor.Resource
         private const string MANIFEST_PATH = "Assets/Generations/Resources/AddressableResourceManifest.asset";
         private const string MANIFEST_RESOURCES_PATH = "AddressableResourceManifest";
 
-        [MenuItem("Tools/资源管理/生成 Addressable 清单")]
+        [MenuItem("Framework/资源管理/生成 Addressable 清单")]
         static void ShowWindow()
         {
             var window = GetWindow<AddressableManifestGenerator>("Addressable 清单生成器");
@@ -274,7 +274,7 @@ namespace Framework.Editor.Resource
     /// </summary>
     public class AddressableManifestBuildProcessor
     {
-        [MenuItem("Tools/资源管理/自动生成清单（构建时）")]
+        [MenuItem("Framework/资源管理/自动生成清单（构建时）")]
         static void AutoGenerateOnBuild()
         {
             Debug.Log("[AddressableManifestBuildProcessor] 开始自动生成清单...");

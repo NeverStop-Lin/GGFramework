@@ -18,6 +18,7 @@ namespace Framework.Editor.UI
         private int _layerIndex = 0;
         private int _templateIndex = 0;
         private bool _shouldClose = false;
+        private bool _initialFocusSet = false;
         
         private string[] _layerNames;
         private string[] _templateNames;
@@ -42,6 +43,7 @@ namespace Framework.Editor.UI
             window._layerIndex = 0;
             window._templateIndex = 0;
             window._shouldClose = false;
+            window._initialFocusSet = false;
             
             // 初始化层级列表
             if (layers != null && layers.Count > 0)
@@ -69,37 +71,31 @@ namespace Framework.Editor.UI
         }
         
         /// <summary>
-        /// 扫描模板目录
+        /// 扫描模板目录（支持文件夹结构模板）
         /// </summary>
         private void ScanTemplates()
         {
-            const string TEMPLATE_DIR = "Assets/Framework/Editor/UI/Template";
+            const string TEMPLATE_DIR = "Assets/Framework/UITemplates";
             
             var templateList = new System.Collections.Generic.List<string>();
             var templateNameList = new System.Collections.Generic.List<string>();
             
             if (System.IO.Directory.Exists(TEMPLATE_DIR))
             {
-                // 查找所有.prefab文件
-                var prefabFiles = System.IO.Directory.GetFiles(TEMPLATE_DIR, "*.prefab", System.IO.SearchOption.TopDirectoryOnly);
+                // 查找所有子文件夹
+                var subDirectories = System.IO.Directory.GetDirectories(TEMPLATE_DIR);
                 
-                foreach (var prefabFile in prefabFiles)
+                foreach (var subDir in subDirectories)
                 {
-                    var relativePath = prefabFile.Replace("\\", "/");
-                    var fileName = System.IO.Path.GetFileNameWithoutExtension(relativePath);
+                    var folderName = System.IO.Path.GetFileName(subDir);
+                    var prefabPath = System.IO.Path.Combine(subDir, $"{folderName}.prefab").Replace("\\", "/");
                     
-                    // 去掉 "Template" 后缀显示
-                    var displayName = fileName.EndsWith("Template") 
-                        ? fileName.Substring(0, fileName.Length - "Template".Length) 
-                        : fileName;
-                    
-                    if (string.IsNullOrEmpty(displayName))
+                    // 检查文件夹内是否包含同名预制体
+                    if (System.IO.File.Exists(prefabPath))
                     {
-                        displayName = fileName;
+                        templateList.Add(prefabPath);
+                        templateNameList.Add(folderName);
                     }
-                    
-                    templateList.Add(relativePath);
-                    templateNameList.Add(displayName);
                 }
             }
             
@@ -160,7 +156,12 @@ namespace Framework.Editor.UI
             // UI层级
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("UI层级:", GUILayout.Width(100));
-            _layerIndex = EditorGUILayout.Popup(_layerIndex, _layerNames);
+            var newLayerIndex = EditorGUILayout.Popup(_layerIndex, _layerNames);
+            if (newLayerIndex != _layerIndex)
+            {
+                _layerIndex = newLayerIndex;
+                Repaint();
+            }
             EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.Space(5);
@@ -168,7 +169,12 @@ namespace Framework.Editor.UI
             // 模板选择
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("UI模板:", GUILayout.Width(100));
-            _templateIndex = EditorGUILayout.Popup(_templateIndex, _templateNames);
+            var newTemplateIndex = EditorGUILayout.Popup(_templateIndex, _templateNames);
+            if (newTemplateIndex != _templateIndex)
+            {
+                _templateIndex = newTemplateIndex;
+                Repaint();
+            }
             EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.EndVertical();
@@ -207,10 +213,11 @@ namespace Framework.Editor.UI
             
             EditorGUILayout.Space(10);
             
-            // 自动聚焦到名称输入框
-            if (Event.current.type == EventType.Layout)
+            // 自动聚焦到名称输入框（仅首次）
+            if (!_initialFocusSet && Event.current.type == EventType.Layout)
             {
                 EditorGUI.FocusTextInControl("UINameField");
+                _initialFocusSet = true;
             }
             
             // 处理回车键
@@ -254,6 +261,24 @@ namespace Framework.Editor.UI
         {
             _shouldClose = true;
             
+            var templatePath = _templateIndex >= 0 && _templateIndex < _templatePaths.Length 
+                ? _templatePaths[_templateIndex] 
+                : "";
+            
+            // 查找模板代码路径
+            var templateCodePath = "";
+            if (!string.IsNullOrEmpty(templatePath))
+            {
+                var templateDir = System.IO.Path.GetDirectoryName(templatePath);
+                var templateName = System.IO.Path.GetFileNameWithoutExtension(templatePath);
+                var codePath = System.IO.Path.Combine(templateDir, $"{templateName}.cs").Replace("\\", "/");
+                
+                if (System.IO.File.Exists(codePath))
+                {
+                    templateCodePath = codePath;
+                }
+            }
+            
             _result = new UICreateDialogData
             {
                 UIName = _uiName.Trim(),
@@ -261,9 +286,8 @@ namespace Framework.Editor.UI
                 LayerName = _layerIndex >= 0 && _layerIndex < _layerNames.Length 
                     ? _layerNames[_layerIndex] 
                     : "Main",
-                TemplatePath = _templateIndex >= 0 && _templateIndex < _templatePaths.Length 
-                    ? _templatePaths[_templateIndex] 
-                    : "",
+                TemplatePath = templatePath,
+                TemplateCodePath = templateCodePath,
                 Confirmed = true
             };
         }

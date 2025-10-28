@@ -21,7 +21,7 @@ namespace Framework.Editor.FontOptimizer
         private Vector2 _scrollPosition;
         private HashSet<char> _detectedChars = new HashSet<char>();
 
-        [MenuItem("Tools/字体优化工具（纯C#版）")]
+        [MenuItem("Framework/字体优化/字体优化工具（纯C#版）")]
         public static void ShowWindow()
         {
             var window = GetWindow<FontOptimizerWindow>("字体优化(C#)");

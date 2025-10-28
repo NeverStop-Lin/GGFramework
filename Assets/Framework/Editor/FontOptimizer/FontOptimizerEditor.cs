@@ -20,7 +20,7 @@ namespace Framework.Editor.FontOptimizer
         private string _logMessage = "";
         private Vector2 _scrollPosition;
 
-        [MenuItem("Tools/字体优化工具")]
+        [MenuItem("Framework/字体优化/字体优化工具")]
         public static void ShowWindow()
         {
             var window = GetWindow<FontOptimizerEditor>("字体优化");
