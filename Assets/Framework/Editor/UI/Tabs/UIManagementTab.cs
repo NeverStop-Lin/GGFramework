@@ -451,6 +451,21 @@ namespace Framework.Editor.UI
             // 缓存策略（下拉选择）
             DrawCacheStrategySelector(info, 100);
             
+            // 缓存策略警告（如果多实例使用SmartCache）
+            if (info.InstanceStrategy == UIInstanceStrategy.Multiple && 
+                info.CacheStrategy == UICacheStrategy.SmartCache)
+            {
+                var warningContent = new GUIContent("⚠", "多实例UI不建议使用智能缓存！可能导致缓存管理失效。");
+                var warningStyle = new GUIStyle(EditorStyles.label);
+                warningStyle.normal.textColor = new Color(1f, 0.5f, 0f);
+                warningStyle.fontSize = 16;
+                EditorGUILayout.LabelField(warningContent, warningStyle, GUILayout.Width(20));
+            }
+            else
+            {
+                GUILayout.Space(20);
+            }
+            
             // 预加载（复选框）
             DrawPreloadToggle(info, 60);
             
@@ -560,7 +575,34 @@ namespace Framework.Editor.UI
             var newIndex = EditorGUILayout.Popup(currentIndex, strategies, GUILayout.Width(width));
             if (newIndex != currentIndex)
             {
-                info.CacheStrategy = (UICacheStrategy)newIndex;
+                var newStrategy = (UICacheStrategy)newIndex;
+                
+                // 验证：多实例UI不建议使用SmartCache
+                if (info.InstanceStrategy == UIInstanceStrategy.Multiple && 
+                    newStrategy == UICacheStrategy.SmartCache)
+                {
+                    var result = EditorUtility.DisplayDialog(
+                        "缓存策略警告",
+                        "多实例UI不建议使用【智能缓存】策略！\n\n" +
+                        "原因：\n" +
+                        "• 智能缓存按UI类型统计，无法准确统计多实例数量\n" +
+                        "• 多个实例可能占据大量缓存空间，影响其他UI\n" +
+                        "• 可能导致缓存管理失效\n\n" +
+                        "建议：\n" +
+                        "• 临时UI（Toast、Dialog）→ 使用【不缓存】\n" +
+                        "• 常驻UI → 使用【永久缓存】\n\n" +
+                        "是否仍要设置为智能缓存？",
+                        "仍要设置",
+                        "取消"
+                    );
+                    
+                    if (!result)
+                    {
+                        return; // 用户取消，不修改
+                    }
+                }
+                
+                info.CacheStrategy = newStrategy;
                 UpdateUIConfigFromInfo(info);
             }
         }

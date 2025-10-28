@@ -3,10 +3,10 @@ using Framework.Core;
 using UnityEngine.UI;
 using Framework.Scripts;
 
-namespace Framework.UI.Templates
+namespace Game.UI
 {
 
-    public class ShowToastUI : UIBehaviour
+    public class UI_001 : UIBehaviour
     {
         public GameObject _container;
         public Text message;

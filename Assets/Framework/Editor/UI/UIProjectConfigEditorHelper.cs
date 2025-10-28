@@ -44,11 +44,43 @@ namespace Framework.Editor.UI
                 return;
             }
             
+            // 验证并修正多实例UI的缓存策略
+            ValidateAndFixMultiInstanceCacheStrategy(config);
+            
             // 固定使用 Framework.Core 命名空间
             UIProjectConfigCodeGenerator.GenerateCode(config, settings.ConfigCodeFilePath, "Framework.Core");
             
             // 重新加载运行时配置
             UIProjectConfigManager.Reload();
+        }
+        
+        /// <summary>
+        /// 验证并修正多实例UI的缓存策略
+        /// </summary>
+        private static void ValidateAndFixMultiInstanceCacheStrategy(UIProjectConfig config)
+        {
+            if (config?.UIConfigs == null) return;
+            
+            var fixedCount = 0;
+            
+            foreach (var uiConfig in config.UIConfigs)
+            {
+                // 多实例UI使用SmartCache会导致缓存管理问题
+                if (uiConfig.InstanceStrategy == UIInstanceStrategy.Multiple && 
+                    uiConfig.CacheStrategy == UICacheStrategy.SmartCache)
+                {
+                    // 自动修正为NeverCache（临时UI的常见策略）
+                    uiConfig.CacheStrategy = UICacheStrategy.NeverCache;
+                    fixedCount++;
+                    
+                    Debug.LogWarning($"[UIConfig] 多实例UI不支持SmartCache，已自动修正为NeverCache: {uiConfig.UIName}");
+                }
+            }
+            
+            if (fixedCount > 0)
+            {
+                Debug.Log($"[UIConfig] 缓存策略验证完成，已自动修正 {fixedCount} 个多实例UI的配置");
+            }
         }
         
         /// <summary>

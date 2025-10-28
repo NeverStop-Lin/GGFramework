@@ -79,6 +79,15 @@ namespace Framework.Core
             var uiType = typeof(T);
             var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
             
+            // 验证多实例UI的缓存策略
+            if (config?.InstanceStrategy == UIInstanceStrategy.Multiple && 
+                config.CacheStrategy == UICacheStrategy.SmartCache)
+            {
+                FrameworkLogger.Warn($"[UICenter] 多实例UI不支持SmartCache策略: {uiType.Name}，已强制改为NeverCache");
+                FrameworkLogger.Warn($"[UICenter] 建议：多实例UI应配置为 NeverCache（临时UI）或 AlwaysCache（常驻UI）");
+                // 注意：这里不能直接修改config，只是运行时按NeverCache处理
+            }
+            
             // 单例模式下，忽略instanceId，并刷新层级
             if (config?.InstanceStrategy == UIInstanceStrategy.Singleton)
             {
@@ -356,7 +365,17 @@ namespace Framework.Core
                 
                 // 根据缓存策略决定是否移除
                 var config = UIProjectConfigManager.GetUIInstanceConfig(uiKey.UIType);
-                if (config?.CacheStrategy == UICacheStrategy.NeverCache)
+                
+                // 多实例UI如果配置了SmartCache，强制按NeverCache处理
+                var effectiveCacheStrategy = config?.CacheStrategy ?? UICacheStrategy.SmartCache;
+                if (config?.InstanceStrategy == UIInstanceStrategy.Multiple && 
+                    effectiveCacheStrategy == UICacheStrategy.SmartCache)
+                {
+                    effectiveCacheStrategy = UICacheStrategy.NeverCache;
+                    FrameworkLogger.Warn($"[UICenter] 多实例UI强制使用NeverCache: {uiKey}");
+                }
+                
+                if (effectiveCacheStrategy == UICacheStrategy.NeverCache)
                 {
                     await RemoveUI(uiKey);
                 }

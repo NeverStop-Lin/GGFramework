@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using Framework.Core;
 using Game.Manager;
 using Framework.Scripts;
+using System;
 
 namespace Game.UI
 {
@@ -73,13 +74,13 @@ namespace Game.UI
         private void OnContinueGameClick()
         {
             Debug.Log("点击继续游戏");
-            GridFramework.UI.Show<ShowToastUI>("继续游戏");
+            GridFramework.UI.Show<UI_001>("继续游戏" + DateTime.Now.ToString());
             // if (_gameManager != null)
             // {
             //     Hide();
             //     _gameManager.ContinueGame();
             // }
-            
+
         }
 
         /// <summary>

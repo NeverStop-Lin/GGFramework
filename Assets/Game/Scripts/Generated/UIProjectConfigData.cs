@@ -121,13 +121,13 @@ namespace Framework.Core
                 },
                 new UIInstanceConfig
                 {
-                    UIName = "ShowToastUI",
-                    ResourcePath = "UI\\ShowToastUI",
+                    UIName = "UI_001",
+                    ResourcePath = "UI\\UI_001",
                     LayerName = "Popup",
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    InstanceStrategy = UIInstanceStrategy.Multiple,
-                    LogicScriptPath = "Assets/Game/Scripts/UI/ShowToastUI.cs"
+                    InstanceStrategy = UIInstanceStrategy.Singleton,
+                    LogicScriptPath = "Assets/Game/Scripts/UI/UI_001.cs"
                 },
             };
         }
