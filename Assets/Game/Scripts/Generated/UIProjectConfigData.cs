@@ -1,7 +1,7 @@
 ﻿// ========================================
 // 自动生成的UI项目配置数据
 // 警告: 请勿手动修改此文件，所有修改将在重新生成时丢失
-// 生成时间: 2025-10-28 02:28:11
+// 生成时间: 2025-10-28 10:36:27
 // ========================================
 
 using System.Collections.Generic;
@@ -87,7 +87,8 @@ namespace Framework.Core
                     LayerName = "Main",
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    InstanceStrategy = UIInstanceStrategy.Singleton
+                    InstanceStrategy = UIInstanceStrategy.Singleton,
+                    LogicScriptPath = ""
                 },
                 new UIInstanceConfig
                 {
@@ -96,7 +97,8 @@ namespace Framework.Core
                     LayerName = "Main",
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    InstanceStrategy = UIInstanceStrategy.Singleton
+                    InstanceStrategy = UIInstanceStrategy.Singleton,
+                    LogicScriptPath = ""
                 },
                 new UIInstanceConfig
                 {
@@ -105,7 +107,8 @@ namespace Framework.Core
                     LayerName = "Main",
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    InstanceStrategy = UIInstanceStrategy.Singleton
+                    InstanceStrategy = UIInstanceStrategy.Singleton,
+                    LogicScriptPath = ""
                 },
                 new UIInstanceConfig
                 {
@@ -114,16 +117,8 @@ namespace Framework.Core
                     LayerName = "Main",
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
-                    InstanceStrategy = UIInstanceStrategy.Singleton
-                },
-                new UIInstanceConfig
-                {
-                    UIName = "UI_001",
-                    ResourcePath = "UI/UI_001",
-                    LayerName = "Main",
-                    CacheStrategy = UICacheStrategy.SmartCache,
-                    Preload = false,
-                    InstanceStrategy = UIInstanceStrategy.Singleton
+                    InstanceStrategy = UIInstanceStrategy.Singleton,
+                    LogicScriptPath = ""
                 },
             };
         }

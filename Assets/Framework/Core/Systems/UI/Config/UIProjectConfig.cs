@@ -130,6 +130,8 @@ namespace Framework.Core
                 existing.LayerName = config.LayerName;
                 existing.CacheStrategy = config.CacheStrategy;
                 existing.Preload = config.Preload;
+                existing.InstanceStrategy = config.InstanceStrategy;
+                existing.LogicScriptPath = config.LogicScriptPath;
             }
             else
             {
@@ -159,42 +161,6 @@ namespace Framework.Core
         public List<UIInstanceConfig> GetUIConfigsByLayer(string layerName)
         {
             return UIConfigs.Where(c => c.LayerName == layerName).ToList();
-        }
-        
-        #endregion
-        
-        #region 初始化
-        
-        /// <summary>
-        /// 创建默认配置
-        /// </summary>
-        public void CreateDefaultLayers()
-        {
-            if (LayerDefinitions.Count > 0)
-            {
-                return;
-            }
-            
-            LayerDefinitions.Add(new UILayerDefinition
-            {
-                LayerName = "Main",
-                BaseSortingOrder = 0,
-                Description = "主界面层级，用于全屏UI"
-            });
-            
-            LayerDefinitions.Add(new UILayerDefinition
-            {
-                LayerName = "Popup",
-                BaseSortingOrder = 1000,
-                Description = "弹窗层级，用于弹出式UI"
-            });
-            
-            LayerDefinitions.Add(new UILayerDefinition
-            {
-                LayerName = "Top",
-                BaseSortingOrder = 2000,
-                Description = "顶层层级，用于始终显示在最上层的UI"
-            });
         }
         
         #endregion

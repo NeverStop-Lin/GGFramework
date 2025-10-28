@@ -691,20 +691,25 @@ namespace Framework.Editor.UI
                     }
                 }
                 
-                // 生成代码
-                var logicCode = UICodeTemplate.GenerateLogicCode(info.UIName, _namespace);
+                // 步骤2: 确定逻辑脚本路径（相对于项目根目录）
+                var logicFilePath = Path.Combine(_logicOutputPath, $"{info.UIName}.cs");
+                var logicScriptPath = ConvertToRelativePath(logicFilePath);
                 
-                // 确保目录存在
+                // 步骤3: 先更新配置（包含脚本路径）
+                UpdateUIConfig(info, info.LayerName, logicScriptPath);
+                
+                // 步骤4: 确保目录存在
                 if (!Directory.Exists(_logicOutputPath))
                 {
                     Directory.CreateDirectory(_logicOutputPath);
                 }
                 
-                // 写入Logic文件（仅在不存在时创建）
-                if (!File.Exists(info.LogicFilePath))
+                // 步骤5: 生成代码（仅在不存在时创建）
+                if (!File.Exists(logicFilePath))
                 {
-                    File.WriteAllText(info.LogicFilePath, logicCode);
-                    Debug.Log($"[UI代码生成] {info.UIName} Logic 文件已创建");
+                    var logicCode = UICodeTemplate.GenerateLogicCode(info.UIName, _namespace);
+                    File.WriteAllText(logicFilePath, logicCode);
+                    Debug.Log($"[UI代码生成] {info.UIName} Logic 文件已创建: {logicScriptPath}");
                 }
                 else
                 {
@@ -714,9 +719,6 @@ namespace Framework.Editor.UI
                 // 刷新资源
                 AssetDatabase.Refresh();
                 AssetDatabase.SaveAssets();
-                
-                // 更新配置
-                UpdateUIConfig(info, info.LayerName);
                 
                 // 等待编译并绑定脚本
                 WaitForCompilationAndAttach(info.Prefab, info.UIName, _namespace);
@@ -774,7 +776,7 @@ namespace Framework.Editor.UI
         /// <summary>
         /// 更新UI配置
         /// </summary>
-        private void UpdateUIConfig(UIPrefabInfo info, string layerName)
+        private void UpdateUIConfig(UIPrefabInfo info, string layerName, string logicScriptPath)
         {
             if (_config == null) return;
             
@@ -787,7 +789,8 @@ namespace Framework.Editor.UI
                 LayerName = layerName,
                 CacheStrategy = info.CacheStrategy,  // 使用info中的缓存策略
                 Preload = info.Preload,
-                InstanceStrategy = info.InstanceStrategy
+                InstanceStrategy = info.InstanceStrategy,
+                LogicScriptPath = logicScriptPath
             };
             
             _config.AddOrUpdateUIConfig(uiConfig);
@@ -799,7 +802,7 @@ namespace Framework.Editor.UI
         /// <summary>
         /// 更新UI配置（创建新UI时使用）
         /// </summary>
-        private void UpdateUIConfig(string uiName, string prefabPath, string layerName)
+        private void UpdateUIConfig(string uiName, string prefabPath, string layerName, string logicScriptPath)
         {
             if (_config == null) return;
             
@@ -812,7 +815,8 @@ namespace Framework.Editor.UI
                 LayerName = layerName,
                 CacheStrategy = UICacheStrategy.SmartCache,  // 默认智能缓存
                 Preload = false,
-                InstanceStrategy = UIInstanceStrategy.Singleton
+                InstanceStrategy = UIInstanceStrategy.Singleton,
+                LogicScriptPath = logicScriptPath
             };
             
             _config.AddOrUpdateUIConfig(uiConfig);
@@ -1368,6 +1372,28 @@ namespace Framework.Editor.UI
         }
         
         /// <summary>
+        /// 将绝对路径或Assets路径转换为相对于项目根目录的相对路径
+        /// </summary>
+        private string ConvertToRelativePath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return "";
+            
+            // 如果是绝对路径，尝试转换为相对路径
+            if (Path.IsPathRooted(path))
+            {
+                var projectPath = Directory.GetCurrentDirectory();
+                if (path.StartsWith(projectPath))
+                {
+                    path = path.Substring(projectPath.Length + 1);
+                }
+            }
+            
+            // 统一使用正斜杠
+            return path.Replace("\\", "/");
+        }
+        
+        /// <summary>
         /// 创建新的UI预制体
         /// </summary>
         private void CreateNewUIPrefab()
@@ -1470,13 +1496,17 @@ namespace Framework.Editor.UI
                 // 刷新资源数据库
                 AssetDatabase.Refresh();
                 
-                // 步骤12: 更新配置
-                UpdateUIConfig(uiName, relativePath, layerName);
+                // 步骤12: 确定脚本路径（相对于项目根目录）
+                var logicFilePath = Path.Combine(_logicOutputPath, $"{uiName}.cs");
+                var logicScriptPath = ConvertToRelativePath(logicFilePath);
                 
-                // 步骤13: 生成脚本
+                // 步骤13: 先更新配置（包含脚本路径）
+                UpdateUIConfig(uiName, relativePath, layerName, logicScriptPath);
+                
+                // 步骤14: 生成脚本
                 GenerateUIScripts(newPrefab, uiName, relativePath);
                 
-                // 步骤14: 延迟刷新列表
+                // 步骤15: 延迟刷新列表
                 _needRefresh = true;
                 
                 // 高亮显示新创建的预制体

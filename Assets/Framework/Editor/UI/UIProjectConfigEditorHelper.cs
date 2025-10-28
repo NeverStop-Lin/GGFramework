@@ -58,7 +58,35 @@ namespace Framework.Editor.UI
         {
             // 创建默认配置
             var defaultConfig = new UIProjectConfig();
-            defaultConfig.CreateDefaultLayers();
+            
+            // 显式创建默认层级定义
+            defaultConfig.LayerDefinitions.Add(new UILayerDefinition
+            {
+                LayerName = "Main",
+                BaseSortingOrder = 0,
+                Description = "主界面层级，用于全屏UI"
+            });
+            
+            defaultConfig.LayerDefinitions.Add(new UILayerDefinition
+            {
+                LayerName = "Popup",
+                BaseSortingOrder = 1000,
+                Description = "弹窗层级，用于弹出式UI"
+            });
+            
+            defaultConfig.LayerDefinitions.Add(new UILayerDefinition
+            {
+                LayerName = "Top",
+                BaseSortingOrder = 2000,
+                Description = "顶层层级，用于始终显示在最上层的UI"
+            });
+            
+            defaultConfig.LayerDefinitions.Add(new UILayerDefinition
+            {
+                LayerName = "Frame",
+                BaseSortingOrder = 9900,
+                Description = "框架级别"
+            });
             
             // 生成代码（固定命名空间 Framework.Core）
             UIProjectConfigCodeGenerator.GenerateCode(defaultConfig, filePath, "Framework.Core");

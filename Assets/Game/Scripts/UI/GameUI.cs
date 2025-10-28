@@ -17,20 +17,5 @@ namespace Game.UI
 
         }
 
-        private void Update()
-        {
-
-        }
-
-        private void OnStartClick()
-        {
-
-        }
-
-        private void OnSettingsClick()
-        {
-
-        }
-
     }
 }

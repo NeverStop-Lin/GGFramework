@@ -142,7 +142,8 @@ namespace Framework.Editor.UI
                 sb.AppendLine($"                    LayerName = \"{EscapeString(uiConfig.LayerName)}\",");
                 sb.AppendLine($"                    CacheStrategy = UICacheStrategy.{uiConfig.CacheStrategy},");
                 sb.AppendLine($"                    Preload = {uiConfig.Preload.ToString().ToLower()},");
-                sb.AppendLine($"                    InstanceStrategy = UIInstanceStrategy.{uiConfig.InstanceStrategy}");
+                sb.AppendLine($"                    InstanceStrategy = UIInstanceStrategy.{uiConfig.InstanceStrategy},");
+                sb.AppendLine($"                    LogicScriptPath = \"{EscapeString(uiConfig.LogicScriptPath)}\"");
                 sb.AppendLine("                },");
             }
             

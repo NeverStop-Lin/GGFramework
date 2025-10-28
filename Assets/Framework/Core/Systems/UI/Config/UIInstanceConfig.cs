@@ -45,6 +45,12 @@ namespace Framework.Core
         /// </summary>
         [Tooltip("UI实例策略：单例或多实例")]
         public UIInstanceStrategy InstanceStrategy = UIInstanceStrategy.Singleton;
+        
+        /// <summary>
+        /// 逻辑脚本路径（相对于项目根目录）
+        /// </summary>
+        [Tooltip("UI业务逻辑脚本的文件路径")]
+        public string LogicScriptPath;
 
         /// <summary>
         /// 克隆配置
@@ -58,7 +64,8 @@ namespace Framework.Core
                 LayerName = this.LayerName,
                 CacheStrategy = this.CacheStrategy,
                 Preload = this.Preload,
-                InstanceStrategy = this.InstanceStrategy
+                InstanceStrategy = this.InstanceStrategy,
+                LogicScriptPath = this.LogicScriptPath
             };
         }
     }
