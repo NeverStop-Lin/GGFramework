@@ -87,7 +87,7 @@ namespace Framework.Core
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton,
-                    LogicScriptPath = ""
+                    LogicScriptPath = "Assets/Game/Scripts/UI/GameUI.cs"
                 },
                 new UIInstanceConfig
                 {
@@ -97,7 +97,7 @@ namespace Framework.Core
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton,
-                    LogicScriptPath = ""
+                    LogicScriptPath = "Assets/Game/Scripts/UI/MainMenuUI.cs"
                 },
                 new UIInstanceConfig
                 {
@@ -107,7 +107,7 @@ namespace Framework.Core
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton,
-                    LogicScriptPath = ""
+                    LogicScriptPath = "Assets/Game/Scripts/UI/GameOverUI.cs"
                 },
                 new UIInstanceConfig
                 {
@@ -117,7 +117,7 @@ namespace Framework.Core
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton,
-                    LogicScriptPath = ""
+                    LogicScriptPath = "Assets/Game/Scripts/UI/GameHUD.cs"
                 },
             };
         }
