@@ -62,7 +62,7 @@ namespace Framework.Core.Resource
                 }
                 else
                 {
-                    Debug.LogError($"[ResourceCenter] 加载器类型不存在: {value}");
+                    throw new System.ArgumentException($"[ResourceCenter] 加载器类型不存在: {value}");
                 }
             }
         }

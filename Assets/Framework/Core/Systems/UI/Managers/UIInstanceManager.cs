@@ -190,8 +190,8 @@ namespace Framework.Core
                 var toEvict = sorted[0];
                 sorted.RemoveAt(0);
                 
-                // 销毁UI
-                _ = toEvict.ui.DoDestroy();
+                // 销毁UI（异步操作，异常会通过 async void 抛出）
+                HandleDestroyAsync(toEvict.ui, toEvict.uiType);
                 _instances.Remove(toEvict.uiType);
                 _showCounts.Remove(toEvict.uiType);
                 _lastShowTime.Remove(toEvict.uiType);
@@ -211,6 +211,14 @@ namespace Framework.Core
             // 简单估算：每个UI实例约1MB
             // 实际应该通过Profiler API获取
             return _instances.Count * 1.0f;
+        }
+        
+        /// <summary>
+        /// 处理UI销毁异步操作，确保异常能被抛出
+        /// </summary>
+        private async void HandleDestroyAsync(IBaseUI ui, System.Type uiType)
+        {
+            await ui.DoDestroy(); // 不捕获异常，让它作为未处理异常抛出
         }
     }
 }

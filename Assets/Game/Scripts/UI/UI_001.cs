@@ -20,7 +20,9 @@ namespace Game.UI
 
         protected override void OnShow(params object[] args)
         {
-            message.text = args[0] as string;
+            message.text = message.text.ToString();
+            Debug.Log("UI_001: " + message.gameObject.ToString());
+            message.gameObject.SetActive(false);
             _timer.Reset();
             _timer.Delay(duration).Action(() => Hide()).Play();
         }

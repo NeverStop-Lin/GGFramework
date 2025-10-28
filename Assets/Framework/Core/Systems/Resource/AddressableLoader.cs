@@ -159,7 +159,7 @@ namespace Framework.Core.Resource
             }
             catch (Exception e)
             {
-                Debug.LogError($"[AddressableLoader] 资源释放异常: {e}");
+                throw new Exception($"[AddressableLoader] 资源释放异常", e);
             }
         }
 

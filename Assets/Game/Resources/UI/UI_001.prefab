@@ -115,7 +115,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _container: {fileID: 0}
-  message: {fileID: 5750900563361583137}
+  message: {fileID: 0}
   duration: 2
 --- !u!1 &3492443998938090821
 GameObject:

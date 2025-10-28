@@ -31,16 +31,13 @@ namespace Framework.Core.Resource
             try
             {
                 var asset = Resources.Load<T>(path);
-                if (asset == null)
-                {
-                    Debug.LogWarning($"[ResourcesLoader] 资源加载失败: {path}");
-                }
+                // 返回null表示资源不存在，不是异常（Unity的正常行为）
                 return asset;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[ResourcesLoader] 资源加载异常: {path}\n{e}");
-                return null;
+                // 加载过程中的异常（如路径格式错误等）需要抛出
+                throw new Exception($"[ResourcesLoader] 资源加载异常: {path}", e);
             }
         }
 
@@ -61,17 +58,13 @@ namespace Framework.Core.Resource
 
                 onProgress?.Invoke(1f);
 
-                if (request.asset == null)
-                {
-                    Debug.LogWarning($"[ResourcesLoader] 资源加载失败: {path}");
-                }
-
+                // 返回null表示资源不存在，不是异常（Unity的正常行为）
                 return request.asset as T;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[ResourcesLoader] 资源加载异常: {path}\n{e}");
-                return null;
+                // 加载过程中的异常（如路径格式错误等）需要抛出
+                throw new Exception($"[ResourcesLoader] 资源加载异常: {path}", e);
             }
         }
 

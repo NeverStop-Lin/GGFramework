@@ -42,8 +42,7 @@ namespace Framework.Core
         {
             if (_resourceLoader == null)
             {
-                Debug.LogError($"[BaseConfig] 资源加载器未初始化，请先调用 BaseConfig<T>.SetResourceLoader()");
-                return;
+                throw new System.InvalidOperationException($"[BaseConfig] 资源加载器未初始化，请先调用 BaseConfig<T>.SetResourceLoader()");
             }
             
             var textAsset = _resourceLoader.Load<TextAsset>(Url);
@@ -54,7 +53,7 @@ namespace Framework.Core
             }
             else
             {
-                Debug.LogError($"[BaseConfig] 配置文件加载失败: {Url}");
+                throw new System.IO.FileNotFoundException($"[BaseConfig] 配置文件加载失败: {Url}");
             }
         }
     }

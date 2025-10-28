@@ -29,8 +29,8 @@ namespace Framework.Core
             if (_uiStack.Count > 0 && hidePrevious)
             {
                 var previous = _uiStack.Peek();
-                // 隐藏但不销毁
-                _ = previous.DoHide();
+                // 隐藏但不销毁（异步操作，异常会通过 async void 抛出）
+                HandleHideAsync(previous);
                 FrameworkLogger.Info($"[UIStack] 隐藏前一个UI: {previous.GetType().Name}");
             }
             
@@ -144,6 +144,14 @@ namespace Framework.Core
                     FrameworkLogger.Info($"[UIStack] 启用Raycast: {ui.GetType().Name}");
                 }
             }
+        }
+        
+        /// <summary>
+        /// 处理UI隐藏异步操作，确保异常能被抛出
+        /// </summary>
+        private async void HandleHideAsync(IBaseUI ui)
+        {
+            await ui.DoHide(); // 不捕获异常，让它作为未处理异常抛出
         }
     }
 }

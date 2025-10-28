@@ -101,7 +101,7 @@ namespace Framework.Core
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UIState] 保存状态失败: {uiType.Name}, {ex.Message}");
+                throw new Exception($"保存UI状态失败: {uiType.Name}", ex);
             }
         }
         
@@ -120,13 +120,13 @@ namespace Framework.Core
                     FrameworkLogger.Info($"[UIState] 加载状态: {uiType.Name} -> {state}");
                     return state;
                 }
+                
+                return UIRuntimeState.None;
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UIState] 加载状态失败: {uiType.Name}, {ex.Message}");
+                throw new Exception($"加载UI状态失败: {uiType.Name}", ex);
             }
-            
-            return UIRuntimeState.None;
         }
     }
 }

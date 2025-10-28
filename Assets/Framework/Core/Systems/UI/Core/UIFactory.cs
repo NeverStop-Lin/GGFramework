@@ -89,9 +89,8 @@ namespace Framework.Core
                 
                 return ui;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                FrameworkLogger.Error($"[UIFactory] 从Prefab创建UI失败: {uiType.Name}, 路径: {resourcePath}, 错误: {ex.Message}");
                 throw;
             }
         }

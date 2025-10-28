@@ -70,14 +70,24 @@ namespace Framework.Core
 
             var removeList = new List<ActionItem>();
             var results = new List<object>();
+            var exceptions = new List<Exception>();
+            
             foreach (var actionItem in _actions)
             {
                 if (actionItem.Action != null)
                 {
-                    results.Add(OnInvokeItem(actionItem.Action, args));
-                    if (actionItem.Once)
+                    try
                     {
-                        removeList.Add(actionItem);
+                        results.Add(OnInvokeItem(actionItem.Action, args));
+                        if (actionItem.Once)
+                        {
+                            removeList.Add(actionItem);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // 收集异常，继续执行其他回调
+                        exceptions.Add(ex);
                     }
                 }
             }
@@ -85,6 +95,12 @@ namespace Framework.Core
             {
                 Remove(item.Action, item.Target);
             });
+
+            // 如果有异常，抛出聚合异常
+            if (exceptions.Count > 0)
+            {
+                throw new AggregateException("事件回调中发生异常", exceptions);
+            }
 
             return results.ToArray();
         }

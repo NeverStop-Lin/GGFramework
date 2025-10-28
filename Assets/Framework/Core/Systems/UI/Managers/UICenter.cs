@@ -133,8 +133,8 @@ namespace Framework.Core
                 // 添加到实例管理器
                 _instanceManager.AddInstance(uiKey.UIType, ui);
                 
-                // 正确等待异步方法（修复Bug #2）
-                _ = CreateAndShowAsync(ui, args, uiState, uiKey);
+                // 异步创建并显示UI，确保异常能被观察到
+                HandleAsyncOperation(CreateAndShowAsync(ui, args, uiState, uiKey), uiKey);
             }
             else
             {
@@ -147,7 +147,8 @@ namespace Framework.Core
                     FrameworkLogger.Info($"[UICenter] 单例UI刷新层级: {uiKey}");
                 }
                 
-                _ = ShowOnlyAsync(uiState.Ui, args, uiState, uiKey);
+                // 异步显示UI，确保异常能被观察到
+                HandleAsyncOperation(ShowOnlyAsync(uiState.Ui, args, uiState, uiKey), uiKey);
             }
 
             return new UiLifeCycle<T>
@@ -177,8 +178,8 @@ namespace Framework.Core
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI显示异常: {uiKey}, {ex.Message}\n{ex.StackTrace}");
                 RemoveUi(uiKey, ex);
+                throw;
             }
         }
         
@@ -198,8 +199,8 @@ namespace Framework.Core
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI显示异常: {uiKey}, {ex.Message}");
                 uiState.ShowTcs?.TrySetException(ex);
+                throw;
             }
         }
 
@@ -217,7 +218,6 @@ namespace Framework.Core
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI创建失败: {uiKey}, {ex.Message}");
                 uiState.CreateTcs?.TrySetException(ex);
                 throw;
             }
@@ -249,7 +249,6 @@ namespace Framework.Core
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI显示失败: {uiKey}, {ex.Message}");
                 uiState.ShowTcs?.TrySetException(ex);
                 throw;
             }
@@ -269,7 +268,6 @@ namespace Framework.Core
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI显示动画失败: {uiKey}, {ex.Message}");
                 uiState.ReadyTcs?.TrySetException(ex);
                 throw;
             }
@@ -384,7 +382,6 @@ namespace Framework.Core
             }
             catch (Exception ex)
             {
-                FrameworkLogger.Error($"[UICenter] UI隐藏失败: {uiKey}, {ex.Message}");
                 uiState.HideTcs?.TrySetException(ex);
                 throw;
             }
@@ -460,9 +457,9 @@ namespace Framework.Core
                     
                     FrameworkLogger.Info($"[UICenter] UI销毁成功: {uiKey}");
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    FrameworkLogger.Error($"[UICenter] UI销毁失败: {uiKey}, {ex.Message}");
+                    throw;
                 }
             }
         }
@@ -689,16 +686,14 @@ namespace Framework.Core
                 
                 if (prefab == null)
                 {
-                    FrameworkLogger.Error($"[UICenter] 预加载失败：无法加载Prefab: {config.ResourcePath}");
-                    return;
+                    throw new Exception($"预加载失败：无法加载Prefab: {config.ResourcePath}");
                 }
                 
                 FrameworkLogger.Info($"[UICenter] UI资源预加载完成: {uiType.Name}");
                 FrameworkLogger.Info($"[UICenter] Prefab已缓存到框架资源系统，后续实例化时将直接使用");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                FrameworkLogger.Error($"[UICenter] UI资源预加载失败: {uiType.Name}, {ex.Message}");
                 throw;
             }
         }
@@ -849,7 +844,6 @@ namespace Framework.Core
 
                 if (exception != null)
                 {
-                    FrameworkLogger.Error($"[UICenter] UI操作异常: {uiKey}, {exception.Message}");
                     tcs.TrySetException(exception);
                 }
                 else
@@ -862,6 +856,17 @@ namespace Framework.Core
             _instanceManager.RemoveInstance(uiKey.UIType);
             _layerManager.ReleaseLayer(uiKey.UIType);
             _stateManager.RemoveState(uiKey.UIType);
+        }
+        
+        /// <summary>
+        /// 处理异步操作，确保异常能被观察到
+        /// 异常会通过两种方式暴露：
+        /// 1. TaskCompletionSource 传递给调用方的 UiLifeCycle.ShowTask
+        /// 2. 在 async void 中重新抛出，触发 Unity 全局异常处理
+        /// </summary>
+        private async void HandleAsyncOperation(Task task, UIInstanceKey uiKey)
+        {
+            await task; // 不捕获异常，让它作为未处理异常抛出
         }
         
         #endregion
