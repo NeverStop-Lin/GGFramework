@@ -9,7 +9,7 @@ namespace Game.UI
     /// 游戏结束界面
     /// 显示生存时间和提供重新开始选项
     /// </summary>
-    public partial class GameOverUI
+    public class GameOverUI : UIBehaviour
     {
         [Header("显示组件")]
         [SerializeField] private Text titleText;
@@ -20,26 +20,9 @@ namespace Game.UI
         [SerializeField] private Button restartButton;
         [SerializeField] private Button mainMenuButton;
 
-        protected override void Awake()
-        {
-            base.Awake();
-
-            // 绑定按钮事件
-            if (restartButton != null)
-            {
-                restartButton.onClick.AddListener(OnRestartClick);
-            }
-
-            if (mainMenuButton != null)
-            {
-                mainMenuButton.onClick.AddListener(OnMainMenuClick);
-            }
-        }
 
         protected override void OnShow(params object[] args)
         {
-            base.OnShow(args);
-
             var gameManager = GameManager.Instance;
             if (gameManager != null)
             {
@@ -52,8 +35,6 @@ namespace Game.UI
 
         protected override void OnHide(params object[] args)
         {
-            base.OnHide(args);
-
             // 恢复游戏时间
             Time.timeScale = 1f;
         }
@@ -113,6 +94,7 @@ namespace Game.UI
             if (gameManager != null)
             {
                 Hide();
+
                 gameManager.ReturnToMainMenu();
             }
         }

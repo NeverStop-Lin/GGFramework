@@ -9,7 +9,7 @@ namespace Game.UI
     /// 游戏主界面HUD
     /// 显示玩家状态和资源信息
     /// </summary>
-    public partial class GameHUD : UIBehaviour
+    public  class GameHUD : UIBehaviour
     {
         [Header("状态条")]
         [SerializeField] private Slider healthBar;

@@ -212,6 +212,21 @@ namespace Framework.Core
             // 单例模式：使用Type
             return Center.Hide(this.GetType(), args);
         }
+        
+        /// <summary>
+        /// 移除当前UI实例（支持单例和多实例）
+        /// </summary>
+        public Task Remove()
+        {
+            // 多实例模式：使用instanceId
+            if (!string.IsNullOrEmpty(InstanceId))
+            {
+                return Center.RemoveUI(this.GetType(), InstanceId);
+            }
+            
+            // 单例模式：使用Type
+            return Center.RemoveUI(this.GetType());
+        }
 
         #endregion
 

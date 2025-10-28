@@ -887,6 +887,12 @@ namespace Framework.Editor.UI
                 // 刷新资源
                 AssetDatabase.Refresh();
                 
+                // 同步IDE项目文件
+                if (deleteOptions.DeleteLogicScript)
+                {
+                    SyncIDEProjectFiles();
+                }
+                
                 // 延迟刷新列表（避免在GUI绘制中刷新）
                 _needRefresh = true;
                 
@@ -1020,6 +1026,12 @@ namespace Framework.Editor.UI
             }
             
             AssetDatabase.Refresh();
+            
+            // 同步IDE项目文件
+            if (deleteOptions.DeleteLogicScript)
+            {
+                SyncIDEProjectFiles();
+            }
             
             // 延迟刷新列表（避免在GUI绘制中刷新）
             _needRefresh = true;
@@ -1621,6 +1633,9 @@ namespace Framework.Editor.UI
                 AssetDatabase.Refresh();
                 AssetDatabase.SaveAssets();
                 
+                // 强制同步IDE项目文件，使IDE能立即识别新文件
+                SyncIDEProjectFiles();
+                
                 // 等待编译完成后绑定脚本到预制体
                 WaitForCompilationAndAttach(prefab, uiName, _namespace);
             }
@@ -1766,12 +1781,96 @@ namespace Framework.Editor.UI
                 AssetDatabase.Refresh();
                 AssetDatabase.SaveAssets();
                 
+                // 强制同步IDE项目文件，使IDE能立即识别新文件
+                SyncIDEProjectFiles();
+                
                 // 等待编译完成后绑定脚本到预制体，并传递模板类名用于删除旧组件
                 WaitForCompilationAndAttach(prefab, uiName, _namespace, templateClassName);
             }
             catch (System.Exception ex)
             {
                 Debug.LogError($"[UIManagement] {uiName} 脚本生成失败: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 强制同步IDE项目文件
+        /// </summary>
+        private void SyncIDEProjectFiles()
+        {
+            try
+            {
+                // 方法1: 使用CodeEditor API（Unity 2020+推荐方法）
+                var codeEditorType = System.Type.GetType("UnityEditor.CodeEditor.CodeEditor,UnityEditor");
+                if (codeEditorType != null)
+                {
+                    var currentEditorProperty = codeEditorType.GetProperty("CurrentEditor", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (currentEditorProperty != null)
+                    {
+                        var currentEditor = currentEditorProperty.GetValue(null);
+                        if (currentEditor != null)
+                        {
+                            var syncMethod = currentEditor.GetType().GetMethod("SyncAll", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                            if (syncMethod != null)
+                            {
+                                syncMethod.Invoke(currentEditor, null);
+                                Debug.Log("[UIManagement] IDE项目文件已同步（CodeEditor.SyncAll）");
+                                return;
+                            }
+                        }
+                    }
+                }
+                
+                // 方法2: 使用SyncVS（较旧的Unity版本）
+                var syncVS = System.Type.GetType("UnityEditor.SyncVS,UnityEditor");
+                if (syncVS != null)
+                {
+                    var syncSolution = syncVS.GetMethod("SyncSolution", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (syncSolution != null)
+                    {
+                        syncSolution.Invoke(null, null);
+                        Debug.Log("[UIManagement] IDE项目文件已同步（SyncVS.SyncSolution）");
+                        return;
+                    }
+                }
+                
+                // 方法3: 强制重新导入，触发IDE更新
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+                
+                // 方法4: 触摸.csproj文件，更新修改时间，强制IDE重新加载
+                TouchCSharpProjectFiles();
+                
+                Debug.Log("[UIManagement] 已强制刷新资源数据库并更新项目文件时间戳");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[UIManagement] IDE项目同步失败，可能需要手动刷新IDE: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 触摸C#项目文件，更新修改时间，强制IDE重新加载
+        /// </summary>
+        private void TouchCSharpProjectFiles()
+        {
+            try
+            {
+                var projectRoot = Directory.GetCurrentDirectory();
+                var csprojFiles = Directory.GetFiles(projectRoot, "*.csproj", SearchOption.TopDirectoryOnly);
+                
+                foreach (var csprojFile in csprojFiles)
+                {
+                    File.SetLastWriteTime(csprojFile, System.DateTime.Now);
+                }
+                
+                if (csprojFiles.Length > 0)
+                {
+                    Debug.Log($"[UIManagement] 已更新 {csprojFiles.Length} 个.csproj文件时间戳");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[UIManagement] 更新.csproj文件时间戳失败: {ex.Message}");
             }
         }
         

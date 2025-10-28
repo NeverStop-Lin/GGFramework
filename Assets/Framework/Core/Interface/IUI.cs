@@ -20,11 +20,11 @@ namespace Framework.Core
         UiLifeCycle<T> Show<T>(params object[] args) where T : IBaseUI;
         
         /// <summary>
-        /// 显示UI（支持多实例）
+        /// 显示UI的指定实例（多实例模式）
         /// </summary>
-        /// <param name="instanceId">实例ID，null表示使用默认实例</param>
+        /// <param name="instanceId">实例ID</param>
         /// <param name="args">传递给UI的参数</param>
-        UiLifeCycle<T> Show<T>(string instanceId, params object[] args) where T : IBaseUI;
+        UiLifeCycle<T> ShowInstance<T>(string instanceId, params object[] args) where T : IBaseUI;
         
         /// <summary>
         /// 隐藏UI（单例或默认实例）
@@ -32,9 +32,11 @@ namespace Framework.Core
         Task<object> Hide<T>(params object[] args) where T : IBaseUI;
         
         /// <summary>
-        /// 隐藏UI（支持多实例）
+        /// 隐藏UI的指定实例（多实例模式）
         /// </summary>
-        Task<object> Hide<T>(string instanceId, params object[] args) where T : IBaseUI;
+        /// <param name="instanceId">实例ID</param>
+        /// <param name="args">传递给UI的参数</param>
+        Task<object> HideInstance<T>(string instanceId, params object[] args) where T : IBaseUI;
         
         /// <summary>
         /// 隐藏UI（通过Type）
@@ -51,24 +53,34 @@ namespace Framework.Core
         #region 实例管理
         
         /// <summary>
-        /// 销毁指定UI（单例或默认实例）
+        /// 移除指定UI（单例或默认实例）
         /// </summary>
-        Task DestroyUI<T>() where T : IBaseUI;
+        Task RemoveUI<T>() where T : IBaseUI;
         
         /// <summary>
-        /// 销毁指定UI（支持多实例）
+        /// 移除指定UI（支持多实例）
         /// </summary>
-        Task DestroyUI<T>(string instanceId) where T : IBaseUI;
+        Task RemoveUI<T>(string instanceId) where T : IBaseUI;
         
         /// <summary>
-        /// 销毁指定类型的所有实例
+        /// 移除指定UI（通过Type）
         /// </summary>
-        Task DestroyAllInstancesOf<T>() where T : IBaseUI;
+        Task RemoveUI(Type uiType);
         
         /// <summary>
-        /// 销毁所有UI
+        /// 移除指定UI（通过Type和实例ID）
         /// </summary>
-        Task DestroyAllUI();
+        Task RemoveUI(Type uiType, string instanceId);
+        
+        /// <summary>
+        /// 移除指定类型的所有实例
+        /// </summary>
+        Task RemoveAllInstancesOf<T>() where T : IBaseUI;
+        
+        /// <summary>
+        /// 移除所有UI
+        /// </summary>
+        Task RemoveAllUI();
         
         /// <summary>
         /// 获取UI实例（单例或默认实例）

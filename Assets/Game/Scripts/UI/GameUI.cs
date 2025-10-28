@@ -1,6 +1,8 @@
+using Framework.Core;
+
 namespace Game.UI
 {
-    public partial class GameUI
+    public class GameUI : UIBehaviour
     {
         protected override void OnCreate(params object[] args)
         {

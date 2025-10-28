@@ -62,20 +62,19 @@ namespace Framework.Core
             if (config?.InstanceStrategy == UIInstanceStrategy.Multiple)
             {
                 var autoInstanceId = GenerateAutoInstanceId(uiType);
-                return Show<T>(autoInstanceId, args);
+                return ShowInstance<T>(autoInstanceId, args);
             }
             
             // 单例模式：使用null作为instanceId
-            return Show<T>(null, args);
+            return ShowInstance<T>(null, args);
         }
         
         /// <summary>
-        /// 显示UI（手动指定实例ID）
-        /// 注意：单例模式会忽略instanceId参数
+        /// 显示UI的指定实例（多实例模式）
         /// </summary>
-        /// <param name="instanceId">实例ID，null表示使用默认实例</param>
+        /// <param name="instanceId">实例ID</param>
         /// <param name="args">传递给UI的参数</param>
-        public UiLifeCycle<T> Show<T>(string instanceId, params object[] args) where T : IBaseUI
+        public UiLifeCycle<T> ShowInstance<T>(string instanceId, params object[] args) where T : IBaseUI
         {
             var uiType = typeof(T);
             var config = UIProjectConfigManager.GetUIInstanceConfig(uiType);
@@ -87,7 +86,7 @@ namespace Framework.Core
             }
             
             var uiKey = new UIInstanceKey(uiType, instanceId);
-            FrameworkLogger.Info($"[UICenter] 请求显示UI: {uiKey}");
+            FrameworkLogger.Info($"[UICenter] 请求显示UI实例: {uiKey}");
 
             var uiState = _uiStates.GetOrAdd(uiKey, _ => new UiState());
 
@@ -280,13 +279,15 @@ namespace Framework.Core
         /// </summary>
         public Task<object> Hide<T>(params object[] args) where T : IBaseUI
         {
-            return Hide<T>(null, args);
+            return HideInstance<T>(null, args);
         }
         
         /// <summary>
-        /// 隐藏UI（支持多实例）
+        /// 隐藏UI的指定实例（多实例模式）
         /// </summary>
-        public Task<object> Hide<T>(string instanceId, params object[] args) where T : IBaseUI
+        /// <param name="instanceId">实例ID</param>
+        /// <param name="args">传递给UI的参数</param>
+        public Task<object> HideInstance<T>(string instanceId, params object[] args) where T : IBaseUI
         {
             var uiKey = new UIInstanceKey(typeof(T), instanceId);
             return Hide(uiKey, args);
@@ -353,11 +354,11 @@ namespace Framework.Core
                 
                 FrameworkLogger.Info($"[UICenter] UI隐藏成功: {uiKey}");
                 
-                // 根据缓存策略决定是否销毁
+                // 根据缓存策略决定是否移除
                 var config = UIProjectConfigManager.GetUIInstanceConfig(uiKey.UIType);
                 if (config?.CacheStrategy == UICacheStrategy.NeverCache)
                 {
-                    await DestroyUI(uiKey);
+                    await RemoveUI(uiKey);
                 }
                 
                 return null;
@@ -375,26 +376,44 @@ namespace Framework.Core
         #region 实例管理
         
         /// <summary>
-        /// 销毁指定UI（单例或默认实例）
+        /// 移除指定UI（单例或默认实例）
         /// </summary>
-        public async Task DestroyUI<T>() where T : IBaseUI
+        public async Task RemoveUI<T>() where T : IBaseUI
         {
-            await DestroyUI<T>(null);
+            await RemoveUI<T>(null);
         }
         
         /// <summary>
-        /// 销毁指定UI（支持多实例）
+        /// 移除指定UI（支持多实例）
         /// </summary>
-        public async Task DestroyUI<T>(string instanceId) where T : IBaseUI
+        public async Task RemoveUI<T>(string instanceId) where T : IBaseUI
         {
             var uiKey = new UIInstanceKey(typeof(T), instanceId);
-            await DestroyUI(uiKey);
+            await RemoveUI(uiKey);
         }
         
         /// <summary>
-        /// 销毁指定UI（内部方法）
+        /// 移除指定UI（通过Type）
         /// </summary>
-        private async Task DestroyUI(UIInstanceKey uiKey)
+        public async Task RemoveUI(Type uiType)
+        {
+            var uiKey = new UIInstanceKey(uiType, null);
+            await RemoveUI(uiKey);
+        }
+        
+        /// <summary>
+        /// 移除指定UI（通过Type和实例ID）
+        /// </summary>
+        public async Task RemoveUI(Type uiType, string instanceId)
+        {
+            var uiKey = new UIInstanceKey(uiType, instanceId);
+            await RemoveUI(uiKey);
+        }
+        
+        /// <summary>
+        /// 移除指定UI（内部方法）
+        /// </summary>
+        private async Task RemoveUI(UIInstanceKey uiKey)
         {
             FrameworkLogger.Info($"[UICenter] 请求销毁UI: {uiKey}");
             
@@ -432,10 +451,10 @@ namespace Framework.Core
         /// <summary>
         /// 销毁指定类型的所有实例
         /// </summary>
-        public async Task DestroyAllInstancesOf<T>() where T : IBaseUI
+        public async Task RemoveAllInstancesOf<T>() where T : IBaseUI
         {
             var uiType = typeof(T);
-            FrameworkLogger.Info($"[UICenter] 销毁所有实例: {uiType.Name}");
+            FrameworkLogger.Info($"[UICenter] 移除所有实例: {uiType.Name}");
             
             // 查找该类型的所有实例
             var keysToDestroy = _uiStates.Keys.Where(key => key.UIType == uiType).ToList();
@@ -446,28 +465,28 @@ namespace Framework.Core
                 return;
             }
             
-            FrameworkLogger.Info($"[UICenter] 找到 {keysToDestroy.Count} 个实例，开始销毁");
+            FrameworkLogger.Info($"[UICenter] 找到 {keysToDestroy.Count} 个实例，开始移除");
             
-            // 销毁所有实例
+            // 移除所有实例
             foreach (var key in keysToDestroy)
             {
-                await DestroyUI(key);
+                await RemoveUI(key);
             }
             
-            FrameworkLogger.Info($"[UICenter] {uiType.Name} 所有实例销毁完成");
+            FrameworkLogger.Info($"[UICenter] {uiType.Name} 所有实例移除完成");
         }
         
         /// <summary>
-        /// 销毁所有UI
+        /// 移除所有UI
         /// </summary>
-        public async Task DestroyAllUI()
+        public async Task RemoveAllUI()
         {
-            FrameworkLogger.Info($"[UICenter] 销毁所有UI，总数: {_uiStates.Count}");
+            FrameworkLogger.Info($"[UICenter] 移除所有UI，总数: {_uiStates.Count}");
             
             var uiKeys = _uiStates.Keys.ToList();
             foreach (var uiKey in uiKeys)
             {
-                await DestroyUI(uiKey);
+                await RemoveUI(uiKey);
             }
             
             // 清空管理器
