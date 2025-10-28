@@ -33,10 +33,11 @@ namespace Game.UI
             Time.timeScale = 0f;
         }
 
-        protected override void OnHide(params object[] args)
+        protected override object OnHide(params object[] args)
         {
             // 恢复游戏时间
             Time.timeScale = 1f;
+            return null;
         }
 
         /// <summary>

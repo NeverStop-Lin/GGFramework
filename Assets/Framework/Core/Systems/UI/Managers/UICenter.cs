@@ -347,14 +347,14 @@ namespace Framework.Core
             {
                 _stateManager.SetState(uiKey.UIType, UIRuntimeState.Hidden);
                 
-                // 调用 OnHide
-                await ui.DoHide(args);
+                // 调用 OnHide 并获取返回值
+                var hideResult = await ui.DoHide(args);
                 
                 // 播放隐藏动画
                 await ui.DoHideAnim(args);
                 
-                // 设置结果
-                uiState.HideTcs?.TrySetResult(null);
+                // 将返回值传递给 HideTcs
+                uiState.HideTcs?.TrySetResult(hideResult);
                 
                 // 发送隐藏事件
                 EventBus.Emit(GlobalEventType.UI, GlobalEventType.UIEvent.Hide, uiKey.ToString());
@@ -378,7 +378,7 @@ namespace Framework.Core
                     await RemoveUI(uiKey);
                 }
                 
-                return null;
+                return hideResult;
             }
             catch (Exception ex)
             {

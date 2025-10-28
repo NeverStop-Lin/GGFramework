@@ -44,9 +44,9 @@ namespace Game.UI
             UpdateButtonStates();
         }
 
-        protected override void OnHide(params object[] args)
+        protected override object OnHide(params object[] args)
         {
-
+            return null;
         }
 
 
@@ -71,16 +71,29 @@ namespace Game.UI
         /// <summary>
         /// 点击继续游戏
         /// </summary>
-        private void OnContinueGameClick()
+        private async void OnContinueGameClick()
         {
             Debug.Log("点击继续游戏");
-            GridFramework.UI.Show<UI_001>("继续游戏" + DateTime.Now.ToString());
-            // if (_gameManager != null)
-            // {
-            //     Hide();
-            //     _gameManager.ContinueGame();
-            // }
-
+            
+            // 显示确认对话框
+            var lifecycle = GridFramework.UI.Show<UI_002>();
+            // 等待用户操作并获取结果
+            var result = await lifecycle.HideTask;
+            
+            // 处理结果
+            if (result is bool confirmed && confirmed)
+            {
+                Debug.Log("用户确认继续游戏");
+                if (_gameManager != null)
+                {
+                    await Hide();
+                    _gameManager.ContinueGame();
+                }
+            }
+            else
+            {
+                Debug.Log("用户取消了操作");
+            }
         }
 
         /// <summary>

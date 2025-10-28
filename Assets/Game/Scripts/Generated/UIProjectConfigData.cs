@@ -121,13 +121,23 @@ namespace Framework.Core
                 },
                 new UIInstanceConfig
                 {
-                    UIName = "UI_001",
-                    ResourcePath = "UI\\UI_001",
-                    LayerName = "Popup",
+                    UIName = "ShowToastUI",
+                    ResourcePath = "UI\\ShowToastUI",
+                    LayerName = "Top",
                     CacheStrategy = UICacheStrategy.SmartCache,
                     Preload = false,
                     InstanceStrategy = UIInstanceStrategy.Singleton,
-                    LogicScriptPath = "Assets/Game/Scripts/UI/UI_001.cs"
+                    LogicScriptPath = "Assets/Game/Scripts/UI/ShowToastUI.cs"
+                },
+                new UIInstanceConfig
+                {
+                    UIName = "ShowModalUI",
+                    ResourcePath = "UI\\ShowModalUI",
+                    LayerName = "Top",
+                    CacheStrategy = UICacheStrategy.SmartCache,
+                    Preload = false,
+                    InstanceStrategy = UIInstanceStrategy.Singleton,
+                    LogicScriptPath = "Assets/Game/Scripts/UI/ShowModalUI.cs"
                 },
             };
         }

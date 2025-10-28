@@ -154,8 +154,8 @@ namespace Framework.Core
         /// </summary>
         public async Task<object> DoHide(params object[] args)
         {
-            OnHide(args);
-            return await Task.FromResult<object>(null);
+            var result = OnHide(args);
+            return await Task.FromResult(result);
         }
 
         /// <summary>
@@ -279,7 +279,8 @@ namespace Framework.Core
         /// <summary>
         /// UI隐藏时调用
         /// </summary>
-        protected virtual void OnHide(params object[] args) { }
+        /// <returns>返回值会通过 HideTask 传递给调用方</returns>
+        protected virtual object OnHide(params object[] args) { return null; }
         /// <summary>
         /// 播放隐藏动画（子类可覆盖自定义动画）
         /// </summary>

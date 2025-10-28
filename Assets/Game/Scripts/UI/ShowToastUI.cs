@@ -6,7 +6,7 @@ using Framework.Scripts;
 namespace Game.UI
 {
 
-    public class UI_001 : UIBehaviour
+    public class ShowToastUI : UIBehaviour
     {
         public GameObject _container;
         public Text message;
@@ -20,9 +20,7 @@ namespace Game.UI
 
         protected override void OnShow(params object[] args)
         {
-            message.text = message.text.ToString();
-            Debug.Log("UI_001: " + message.gameObject.ToString());
-            message.gameObject.SetActive(false);
+            message.text = args[0] as string;
             _timer.Reset();
             _timer.Delay(duration).Action(() => Hide()).Play();
         }

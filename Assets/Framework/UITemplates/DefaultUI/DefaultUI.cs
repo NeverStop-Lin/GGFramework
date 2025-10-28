@@ -16,8 +16,9 @@ namespace Framework.UI.Templates
         {
         }
 
-        protected override void OnHide(params object[] args)
+        protected override object OnHide(params object[] args)
         {
+            return null;
         }
 
         private void Update()

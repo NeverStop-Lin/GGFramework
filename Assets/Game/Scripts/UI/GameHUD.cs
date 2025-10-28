@@ -41,10 +41,11 @@ namespace Game.UI
             }
         }
 
-        protected override void OnHide(params object[] args)
+        protected override object OnHide(params object[] args)
         {
             base.OnHide(args);
             UnbindDataObservers();
+            return null;
         }
 
         /// <summary>
