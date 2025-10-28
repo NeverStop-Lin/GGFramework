@@ -58,7 +58,6 @@ namespace Framework.Editor.UI
             sb.AppendLine("// ========================================");
             sb.AppendLine("// 自动生成的UI项目配置数据");
             sb.AppendLine("// 警告: 请勿手动修改此文件，所有修改将在重新生成时丢失");
-            sb.AppendLine("// 生成时间: " + System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             sb.AppendLine("// ========================================");
             sb.AppendLine();
             sb.AppendLine("using System.Collections.Generic;");
