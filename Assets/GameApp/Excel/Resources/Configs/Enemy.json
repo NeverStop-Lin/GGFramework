@@ -1,0 +1,18 @@
+[
+  {
+    "ID": 1,
+    "Name": "僵尸",
+    "MaxHealth": 50,
+    "Speed": 2.0,
+    "Damage": 10,
+    "AttackInterval": 1.5
+  },
+  {
+    "ID": 2,
+    "Name": "骷髅",
+    "MaxHealth": 30,
+    "Speed": 3.0,
+    "Damage": 8,
+    "AttackInterval": 1.0
+  }
+]

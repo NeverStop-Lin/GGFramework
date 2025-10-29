@@ -59,27 +59,7 @@ namespace Framework.Editor.Core
             }
         }
         
-        [MenuItem("Framework/Excel/打开Excel生成器配置", false, 100)]
-        public static void OpenExcelGeneratorSettings()
-        {
-            // 确保索引文件存在
-            if (!FrameworkSettingsIndex.Exists())
-            {
-                FrameworkSettingsIndex.GetOrCreate();
-            }
-            
-            var settings = FrameworkSettingsIndex.Instance?.ExcelGeneratorSettings;
-            if (settings == null)
-            {
-                // 配置不存在，显示欢迎窗口引导创建
-                Debug.Log("[FrameworkSettings] Excel生成器配置不存在，显示欢迎窗口");
-                SettingsWelcomeWindow.ShowExcelGeneratorWelcome();
-                return;
-            }
-            
-            Selection.activeObject = settings;
-            EditorGUIUtility.PingObject(settings);
-        }
+        // 已移除：Excel 生成器配置的直达入口，统一改为通过 Excel 导表工具窗口进入
         
         [MenuItem("Framework/设置/验证配置完整性", false, 20)]
         public static void ValidateSettings()

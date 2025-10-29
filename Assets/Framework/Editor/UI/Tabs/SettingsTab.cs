@@ -270,7 +270,8 @@ namespace Framework.Editor.UI
                     if (_settings.UIPrefabCreationFolder != null)
                     {
                         var path = AssetDatabase.GetAssetPath(_settings.UIPrefabCreationFolder);
-                        EditorUtility.RevealInFinder(path);
+                        var fullPath = System.IO.Path.GetFullPath(path);
+                        System.Diagnostics.Process.Start(fullPath);
                     }
                     else
                     {
@@ -438,7 +439,8 @@ namespace Framework.Editor.UI
                     if (_settings.LogicScriptOutputFolder != null)
                     {
                         var path = AssetDatabase.GetAssetPath(_settings.LogicScriptOutputFolder);
-                        EditorUtility.RevealInFinder(path);
+                        var fullPath = System.IO.Path.GetFullPath(path);
+                        System.Diagnostics.Process.Start(fullPath);
                     }
                     else
                     {

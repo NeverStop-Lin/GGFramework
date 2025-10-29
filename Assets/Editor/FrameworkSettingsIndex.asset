@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a8d975baf222f145a9e1559fd32ba11, type: 3}
   m_Name: FrameworkSettingsIndex
   m_EditorClassIdentifier: 
-  _uiManagerSettings: {fileID: 11400000, guid: 80e9a64ab886ef94781ca5d2524edd5d, type: 2}
-  _excelGeneratorSettings: {fileID: 0}
+  _uiManagerSettings: {fileID: 11400000, guid: a6b58a091c083a547bb9093444f35e3c, type: 2}
+  _excelGeneratorSettings: {fileID: 11400000, guid: f40712a9debaa704dbc841533da09de8, type: 2}

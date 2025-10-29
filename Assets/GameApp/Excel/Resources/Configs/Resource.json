@@ -1,0 +1,18 @@
+[
+  {
+    "ID": 1,
+    "Name": "树木",
+    "Health": 100,
+    "CollectTime": 2.0,
+    "RewardType": "Wood",
+    "RewardAmount": 5
+  },
+  {
+    "ID": 2,
+    "Name": "石头",
+    "Health": 150,
+    "CollectTime": 3.0,
+    "RewardType": "Stone",
+    "RewardAmount": 3
+  }
+]

@@ -12,8 +12,8 @@ namespace Framework.Editor.Excel
     public class ExcelGeneratorSettings : ScriptableObject
     {
         [Header("Excel文件路径")]
-        [Tooltip("Excel文件根目录（拖拽文件夹到此处）")]
-        [SerializeField] private DefaultAsset _excelRootFolder;
+        [Tooltip("Excel文件根目录路径（支持项目外路径，如：C:/Excel 或 Assets/../Excel）")]
+        [SerializeField] private string _excelRootPath;
         
         [Header("输出路径")]
         [Tooltip("JSON数据输出目录")]
@@ -24,7 +24,7 @@ namespace Framework.Editor.Excel
         
         [Header("代码生成设置")]
         [Tooltip("生成代码的默认命名空间")]
-        [SerializeField] private string _defaultNamespace = "Generate.Scripts.Configs";
+        [SerializeField] private string _defaultNamespace;
         
         /// <summary>
         /// Excel文件根目录路径
@@ -33,17 +33,17 @@ namespace Framework.Editor.Excel
         {
             get
             {
-                if (_excelRootFolder != null)
+                if (!string.IsNullOrEmpty(_excelRootPath))
                 {
-                    var path = AssetDatabase.GetAssetPath(_excelRootFolder);
-                    // 如果是 Assets/../Excel 这种相对路径，转换为绝对路径
-                    if (path.StartsWith("Assets/"))
-                    {
-                        return path;
-                    }
+                    return _excelRootPath;
                 }
                 // 默认返回项目外的 Excel 目录
-                return "Assets/../Excel/";
+                return Core.FrameworkDefaultPaths.ExcelRootFolder;
+            }
+            set
+            {
+                _excelRootPath = value;
+                Save();
             }
         }
         
@@ -58,7 +58,7 @@ namespace Framework.Editor.Excel
                 {
                     return AssetDatabase.GetAssetPath(_jsonOutputFolder);
                 }
-                return "Assets/Resources/Configs/";
+                return Core.FrameworkDefaultPaths.ExcelJsonOutputFolder;
             }
         }
         
@@ -73,7 +73,7 @@ namespace Framework.Editor.Excel
                 {
                     return AssetDatabase.GetAssetPath(_csharpOutputFolder);
                 }
-                return "Assets/Generate/Scripts/Configs/";
+                return Core.FrameworkDefaultPaths.ExcelCSharpOutputFolder;
             }
         }
         
@@ -82,22 +82,22 @@ namespace Framework.Editor.Excel
         /// </summary>
         public string DefaultNamespace
         {
-            get => string.IsNullOrEmpty(_defaultNamespace) ? "Generate.Scripts.Configs" : _defaultNamespace;
+            get => string.IsNullOrEmpty(_defaultNamespace) ? Core.FrameworkDefaultPaths.ExcelDefaultNamespace : _defaultNamespace;
             set => _defaultNamespace = value;
         }
         
         /// <summary>
-        /// Excel根文件夹对象引用
+        /// 获取当前激活的Excel生成器配置实例
         /// </summary>
-        public DefaultAsset ExcelRootFolder
+        public static ExcelGeneratorSettings Instance
         {
-            get => _excelRootFolder;
-            set
+            get
             {
-                _excelRootFolder = value;
-                Save();
+                var index = Core.FrameworkSettingsIndex.Instance;
+                return index?.ExcelGeneratorSettings;
             }
         }
+        
         
         /// <summary>
         /// JSON输出文件夹对象引用
@@ -123,6 +123,18 @@ namespace Framework.Editor.Excel
                 _csharpOutputFolder = value;
                 Save();
             }
+        }
+        
+        /// <summary>
+        /// 检查配置是否已初始化（所有必需字段都已设置）
+        /// 检查最终值（包括默认值）
+        /// </summary>
+        public bool IsInitialized()
+        {
+            return !string.IsNullOrEmpty(ExcelRootPath) &&
+                   !string.IsNullOrEmpty(JsonOutputPath) &&
+                   !string.IsNullOrEmpty(CSharpOutputPath) &&
+                   !string.IsNullOrEmpty(DefaultNamespace);
         }
         
         /// <summary>

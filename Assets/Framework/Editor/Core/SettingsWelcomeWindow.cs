@@ -581,6 +581,14 @@ namespace Framework.Editor.Core
                     };
                 }
             }
+            else if (_configType == ConfigType.ExcelGenerator)
+            {
+                // Excel生成器配置完成后，直接打开主界面
+                EditorApplication.delayCall += () =>
+                {
+                    Excel.ExcelGeneratorWindow.ShowWindow();
+                };
+            }
         }
         
         /// <summary>
@@ -620,7 +628,67 @@ namespace Framework.Editor.Core
         private Excel.ExcelGeneratorSettings CreateDefaultExcelGeneratorSettings()
         {
             var settings = CreateInstance<Excel.ExcelGeneratorSettings>();
+            
+            // 填充默认值 - Excel根目录（可能在项目外）
+            var excelRootPath = Core.FrameworkDefaultPaths.ExcelRootFolder;
+            settings.ExcelRootPath = excelRootPath;
+            
+            // 确保Excel根目录存在（支持项目外路径）
+            var fullExcelPath = excelRootPath;
+            if (excelRootPath.StartsWith("Assets/../"))
+            {
+                fullExcelPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", excelRootPath.Substring("Assets/../".Length)));
+            }
+            else if (excelRootPath.StartsWith("Assets/"))
+            {
+                fullExcelPath = System.IO.Path.Combine(Application.dataPath, excelRootPath.Substring("Assets/".Length));
+            }
+            
+            if (!System.IO.Directory.Exists(fullExcelPath))
+            {
+                System.IO.Directory.CreateDirectory(fullExcelPath);
+            }
+            
+            // 创建并设置JSON输出目录
+            var jsonPath = Core.FrameworkDefaultPaths.ExcelJsonOutputFolder;
+            EnsureFolderExists(jsonPath);
+            settings.JsonOutputFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(jsonPath);
+            
+            // 创建并设置C#输出目录
+            var csharpPath = Core.FrameworkDefaultPaths.ExcelCSharpOutputFolder;
+            EnsureFolderExists(csharpPath);
+            settings.CSharpOutputFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(csharpPath);
+            
+            // 设置默认命名空间
+            settings.DefaultNamespace = Core.FrameworkDefaultPaths.ExcelDefaultNamespace;
+            
             return settings;
+        }
+        
+        /// <summary>
+        /// 确保文件夹存在
+        /// </summary>
+        private void EnsureFolderExists(string folderPath)
+        {
+            if (string.IsNullOrEmpty(folderPath)) return;
+            
+            if (!AssetDatabase.IsValidFolder(folderPath))
+            {
+                var parts = folderPath.Split('/');
+                var currentPath = parts[0];
+                
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    var nextPath = currentPath + "/" + parts[i];
+                    if (!AssetDatabase.IsValidFolder(nextPath))
+                    {
+                        AssetDatabase.CreateFolder(currentPath, parts[i]);
+                    }
+                    currentPath = nextPath;
+                }
+                
+                AssetDatabase.Refresh();
+            }
         }
     }
 }

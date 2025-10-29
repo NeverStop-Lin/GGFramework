@@ -268,17 +268,13 @@ namespace Framework.Editor.UI
                     EditorGUILayout.LabelField($"{i + 1}.", GUILayout.Width(25));
                     EditorGUILayout.LabelField(directory);
                     
-                    // 显示按钮 - 在编辑器中聚焦目录
+                    // 显示按钮 - 打开目录内部
                     if (GUILayout.Button("显示", GUILayout.Width(60)))
                     {
                         if (AssetDatabase.IsValidFolder(directory))
                         {
-                            var folderAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(directory);
-                            if (folderAsset != null)
-                            {
-                                Selection.activeObject = folderAsset;
-                                EditorGUIUtility.PingObject(folderAsset);
-                            }
+                            var fullPath = System.IO.Path.GetFullPath(directory);
+                            System.Diagnostics.Process.Start(fullPath);
                         }
                         else
                         {

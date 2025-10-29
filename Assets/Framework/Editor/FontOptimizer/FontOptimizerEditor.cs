@@ -252,7 +252,8 @@ namespace Framework.Editor.FontOptimizer
             var fontEditPath = Path.Combine(Application.dataPath, "../Tools/font-edit");
             if (Directory.Exists(fontEditPath))
             {
-                EditorUtility.RevealInFinder(fontEditPath);
+                var fullPath = Path.GetFullPath(fontEditPath);
+                System.Diagnostics.Process.Start(fullPath);
             }
             else
             {

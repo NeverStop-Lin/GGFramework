@@ -136,13 +136,18 @@ namespace Framework.Editor.FontOptimizer
             }
             if (GUILayout.Button("打开输出目录"))
             {
-                if (File.Exists(_outputPath))
+                var directoryPath = File.Exists(_outputPath) 
+                    ? Path.GetDirectoryName(_outputPath) 
+                    : Path.GetDirectoryName(_outputPath);
+                    
+                if (Directory.Exists(directoryPath))
                 {
-                    EditorUtility.RevealInFinder(_outputPath);
+                    var fullPath = Path.GetFullPath(directoryPath);
+                    System.Diagnostics.Process.Start(fullPath);
                 }
                 else
                 {
-                    EditorUtility.RevealInFinder(Path.GetDirectoryName(_outputPath));
+                    EditorUtility.DisplayDialog("提示", "输出目录不存在", "确定");
                 }
             }
             EditorGUILayout.EndHorizontal();
@@ -295,7 +300,14 @@ namespace Framework.Editor.FontOptimizer
                 _logMessage += $"包含字符数: {allChars.Length}\n";
 
                 EditorUtility.DisplayDialog("成功", $"已导出 {allChars.Length} 个字符到:\n{_outputPath}", "确定");
-                EditorUtility.RevealInFinder(_outputPath);
+                
+                // 打开输出目录
+                var directoryPath = Path.GetDirectoryName(_outputPath);
+                if (Directory.Exists(directoryPath))
+                {
+                    var fullPath = Path.GetFullPath(directoryPath);
+                    System.Diagnostics.Process.Start(fullPath);
+                }
             }
             catch (Exception e)
             {
