@@ -24,30 +24,55 @@ namespace Framework.Editor.UI
         [MenuItem("Framework/UI Manager")]
         public static void ShowWindow()
         {
+            // 检查引导进度，决定显示哪个窗口
+            if (!CheckAndShowGuidance())
+            {
+                // 引导未完成，不打开主窗口
+                return;
+            }
+            
+            // 引导已完成，打开主窗口
             var window = GetWindow<UIManagerWindow>("UI管理器");
             window.minSize = new Vector2(1000, 600);
             window.Show();
         }
         
-        private void OnEnable()
+        /// <summary>
+        /// 检查引导进度并显示对应窗口
+        /// </summary>
+        /// <returns>是否可以打开主窗口</returns>
+        private static bool CheckAndShowGuidance()
         {
-            // 检查配置索引是否存在
+            // 步骤1：检查配置索引是否存在
             if (!Core.FrameworkSettingsIndex.Exists())
             {
                 Debug.Log("[UIManager] 配置索引不存在，创建索引文件");
                 Core.FrameworkSettingsIndex.GetOrCreate();
             }
             
-            // 检查UI管理器配置是否存在
+            // 步骤2：检查UI管理器配置是否存在
             var settings = UIManagerSettings.Instance;
             if (settings == null)
             {
                 Debug.Log("[UIManager] UI管理器配置不存在，显示欢迎窗口");
                 Core.SettingsWelcomeWindow.ShowUIManagerWelcome();
-                Close();
-                return;
+                return false; // 不打开主窗口
             }
             
+            // 步骤3：检查是否已完成初始化
+            if (!settings.IsInitialized())
+            {
+                Debug.Log("[UIManager] UI管理器未完成初始化，显示初始化向导");
+                UIManagerSetupWizard.ShowWizard(settings);
+                return false; // 不打开主窗口
+            }
+            
+            // 所有步骤完成，可以打开主窗口
+            return true;
+        }
+        
+        private void OnEnable()
+        {
             // 确保配置代码文件存在
             EnsureConfigCodeExists();
             

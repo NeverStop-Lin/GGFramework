@@ -268,6 +268,24 @@ namespace Framework.Editor.UI
                     EditorGUILayout.LabelField($"{i + 1}.", GUILayout.Width(25));
                     EditorGUILayout.LabelField(directory);
                     
+                    // 显示按钮 - 在编辑器中聚焦目录
+                    if (GUILayout.Button("显示", GUILayout.Width(60)))
+                    {
+                        if (AssetDatabase.IsValidFolder(directory))
+                        {
+                            var folderAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(directory);
+                            if (folderAsset != null)
+                            {
+                                Selection.activeObject = folderAsset;
+                                EditorGUIUtility.PingObject(folderAsset);
+                            }
+                        }
+                        else
+                        {
+                            EditorUtility.DisplayDialog("提示", $"目录不存在:\n{directory}", "确定");
+                        }
+                    }
+                    
                     // 如果是默认创建路径，显示标签且不允许删除
                     if (isDefaultCreationPath)
                     {
@@ -278,14 +296,14 @@ namespace Framework.Editor.UI
                     }
                     else
                     {
-                    if (GUILayout.Button("删除", GUILayout.Width(60)))
-                    {
-                        EditorGUILayout.EndHorizontal();
-                        _settings.PrefabDirectories.RemoveAt(i);
-                        _settings.Save();
-                        _needRefresh = true; // 延迟刷新
-                        break;
-                    }
+                        if (GUILayout.Button("删除", GUILayout.Width(60)))
+                        {
+                            EditorGUILayout.EndHorizontal();
+                            _settings.PrefabDirectories.RemoveAt(i);
+                            _settings.Save();
+                            _needRefresh = true; // 延迟刷新
+                            break;
+                        }
                     }
                     
                     EditorGUILayout.EndHorizontal();

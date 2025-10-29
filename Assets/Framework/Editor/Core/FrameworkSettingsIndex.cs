@@ -12,7 +12,7 @@ namespace Framework.Editor.Core
     [CreateAssetMenu(fileName = "FrameworkSettingsIndex", menuName = "Framework/Core/Settings Index")]
     public class FrameworkSettingsIndex : ScriptableObject
     {
-        private const string INDEX_PATH = "Assets/Editor/FrameworkSettingsIndex.asset";
+        private const string INDEX_PATH = FrameworkDefaultPaths.SettingsIndexPath;
         
         [Header("编辑器工具配置")]
         [Tooltip("UI管理器配置文件")]

@@ -19,13 +19,10 @@ namespace Framework.Editor.UI
         
         [Header("UI代码生成")]
         [Tooltip("生成UI代码的默认命名空间")]
-        [SerializeField] private string _defaultNamespace = "Game.UI";
+        [SerializeField] private string _defaultNamespace;
         
         [Tooltip("业务逻辑脚本（Logic.cs）的输出目录")]
         [SerializeField] private DefaultAsset _logicScriptOutputFolder;
-        
-        [Tooltip("自动生成绑定脚本（Binding.cs）的输出目录")]
-        [SerializeField] private DefaultAsset _bindingScriptOutputFolder;
         
         [Tooltip("生成代码后是否自动打开文件")]
         [SerializeField] private bool _openAfterGenerate = false;
@@ -72,7 +69,7 @@ namespace Framework.Editor.UI
         /// </summary>
         public string DefaultNamespace
         {
-            get => string.IsNullOrEmpty(_defaultNamespace) ? "Game.UI" : _defaultNamespace;
+            get => string.IsNullOrEmpty(_defaultNamespace) ? Core.FrameworkDefaultPaths.UIDefaultNamespace : _defaultNamespace;
             set
             {
                 _defaultNamespace = value;
@@ -105,35 +102,6 @@ namespace Framework.Editor.UI
             set
             {
                 _logicScriptOutputFolder = value;
-                Save();
-            }
-        }
-        
-        /// <summary>
-        /// 绑定脚本输出路径
-        /// </summary>
-        public string BindingScriptOutputPath
-        {
-            get => _bindingScriptOutputFolder != null ? AssetDatabase.GetAssetPath(_bindingScriptOutputFolder) : "Assets/Game/Scripts/UI/Generated";
-            set
-            {
-                if (!string.IsNullOrEmpty(value))
-                {
-                    _bindingScriptOutputFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(value);
-                    Save();
-                }
-            }
-        }
-        
-        /// <summary>
-        /// 绑定脚本输出文件夹对象引用
-        /// </summary>
-        public DefaultAsset BindingScriptOutputFolder
-        {
-            get => _bindingScriptOutputFolder;
-            set
-            {
-                _bindingScriptOutputFolder = value;
                 Save();
             }
         }
@@ -260,12 +228,6 @@ namespace Framework.Editor.UI
                 return false;
             }
             
-            if (_bindingScriptOutputFolder == null)
-            {
-                errorMessage = "绑定脚本输出目录未设置";
-                return false;
-            }
-            
             if (_uiPrefabCreationFolder == null)
             {
                 errorMessage = "UI预制体创建目录未设置";
@@ -279,6 +241,17 @@ namespace Framework.Editor.UI
             }
             
             return true;
+        }
+        
+        /// <summary>
+        /// 检查是否已完成初始化
+        /// </summary>
+        public bool IsInitialized()
+        {
+            return _configCodeFile != null &&
+                   _logicScriptOutputFolder != null &&
+                   _uiPrefabCreationFolder != null &&
+                   !string.IsNullOrEmpty(_defaultNamespace);
         }
     }
 }

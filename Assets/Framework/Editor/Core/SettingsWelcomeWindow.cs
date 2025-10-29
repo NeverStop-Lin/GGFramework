@@ -61,7 +61,9 @@ namespace Framework.Editor.Core
         /// </summary>
         private void InitializeRecommendedFolder()
         {
-            string recommendPath = "Assets/Game/Settings";
+            string recommendPath = _configType == ConfigType.UIManager
+                ? Core.FrameworkDefaultPaths.UIManagerSettingsFolder
+                : Core.FrameworkDefaultPaths.ExcelGeneratorSettingsFolder;
             
             // 尝试加载推荐文件夹（如果存在）
             if (Directory.Exists(recommendPath))
@@ -168,6 +170,9 @@ namespace Framework.Editor.Core
                 Selection.activeObject = _selectedConfig;
                 EditorGUIUtility.PingObject(_selectedConfig);
                 
+                // 检查是否需要继续引导
+                CheckAndShowNextStep();
+                
                 // 成功，直接关闭
                 Close();
             }
@@ -268,13 +273,15 @@ namespace Framework.Editor.Core
             
             // 获取文件名
             string fileName = _configType == ConfigType.UIManager 
-                ? "UIManagerSettings.asset" 
-                : "ExcelGeneratorSettings.asset";
+                ? Core.FrameworkDefaultPaths.UIManagerSettingsFileName
+                : Core.FrameworkDefaultPaths.ExcelGeneratorSettingsFileName;
             
             // 获取完整路径
             string folderPath = _saveFolder != null 
                 ? AssetDatabase.GetAssetPath(_saveFolder) 
-                : "Assets/Game/Settings";
+                : (_configType == ConfigType.UIManager 
+                    ? Core.FrameworkDefaultPaths.UIManagerSettingsFolder 
+                    : Core.FrameworkDefaultPaths.ExcelGeneratorSettingsFolder);
             
             string fullPath = $"{folderPath}/{fileName}";
             
@@ -298,7 +305,9 @@ namespace Framework.Editor.Core
         /// </summary>
         private void BrowseConfigFile()
         {
-            string recommendPath = "Assets/Game/Settings";
+            string recommendPath = _configType == ConfigType.UIManager
+                ? Core.FrameworkDefaultPaths.UIManagerSettingsFolder
+                : Core.FrameworkDefaultPaths.ExcelGeneratorSettingsFolder;
             
             // 如果推荐目录不存在，从Assets开始
             if (!Directory.Exists(recommendPath))
@@ -366,7 +375,9 @@ namespace Framework.Editor.Core
         {
             string currentPath = _saveFolder != null 
                 ? AssetDatabase.GetAssetPath(_saveFolder) 
-                : "Assets/Game/Settings";
+                : (_configType == ConfigType.UIManager
+                    ? Core.FrameworkDefaultPaths.UIManagerSettingsFolder
+                    : Core.FrameworkDefaultPaths.ExcelGeneratorSettingsFolder);
             
             // 如果默认路径不存在，从Assets开始
             if (!Directory.Exists(currentPath))
@@ -459,7 +470,9 @@ namespace Framework.Editor.Core
             if (_saveFolder == null)
             {
                 // 使用默认路径
-                folderPath = "Assets/Game/Settings";
+                folderPath = _configType == ConfigType.UIManager
+                    ? Core.FrameworkDefaultPaths.UIManagerSettingsFolder
+                    : Core.FrameworkDefaultPaths.ExcelGeneratorSettingsFolder;
                 
                 // 确保默认路径存在
                 if (!Directory.Exists(folderPath))
@@ -480,16 +493,9 @@ namespace Framework.Editor.Core
             }
             
             // 生成文件名
-            string fileName = "";
-            switch (_configType)
-            {
-                case ConfigType.UIManager:
-                    fileName = "UIManagerSettings.asset";
-                    break;
-                case ConfigType.ExcelGenerator:
-                    fileName = "ExcelGeneratorSettings.asset";
-                    break;
-            }
+            string fileName = _configType == ConfigType.UIManager
+                ? Core.FrameworkDefaultPaths.UIManagerSettingsFileName
+                : Core.FrameworkDefaultPaths.ExcelGeneratorSettingsFileName;
             
             // 组合完整路径
             var savePath = Path.Combine(folderPath, fileName);
@@ -538,6 +544,16 @@ namespace Framework.Editor.Core
                 Selection.activeObject = config;
                 EditorGUIUtility.PingObject(config);
                 
+                // 如果是UI管理器配置，打开初始化向导
+                if (_configType == ConfigType.UIManager && config is UI.UIManagerSettings uiSettings)
+                {
+                    // 延迟调用，确保当前窗口关闭后再打开新窗口
+                    EditorApplication.delayCall += () =>
+                    {
+                        UI.UIManagerSetupWizard.ShowWizard(uiSettings);
+                    };
+                }
+                
                 // 成功，不弹窗提示
                 return true;
             }
@@ -545,6 +561,25 @@ namespace Framework.Editor.Core
             {
                 EditorUtility.DisplayDialog("创建失败", $"创建配置文件失败:\n{ex.Message}", "确定");
                 return false;
+            }
+        }
+        
+        /// <summary>
+        /// 检查并显示下一步引导
+        /// </summary>
+        private void CheckAndShowNextStep()
+        {
+            if (_configType == ConfigType.UIManager)
+            {
+                var uiSettings = UI.UIManagerSettings.Instance;
+                if (uiSettings != null && !uiSettings.IsInitialized())
+                {
+                    // 需要继续初始化，延迟调用打开向导
+                    EditorApplication.delayCall += () =>
+                    {
+                        UI.UIManagerSetupWizard.ShowWizard(uiSettings);
+                    };
+                }
             }
         }
         

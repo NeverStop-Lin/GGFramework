@@ -59,28 +59,6 @@ namespace Framework.Editor.Core
             }
         }
         
-        [MenuItem("Framework/UI/打开UI管理器配置", false, 100)]
-        public static void OpenUIManagerSettings()
-        {
-            // 确保索引文件存在
-            if (!FrameworkSettingsIndex.Exists())
-            {
-                FrameworkSettingsIndex.GetOrCreate();
-            }
-            
-            var settings = UI.UIManagerSettings.Instance;
-            if (settings == null)
-            {
-                // 配置不存在，显示欢迎窗口引导创建
-                Debug.Log("[FrameworkSettings] UI管理器配置不存在，显示欢迎窗口");
-                SettingsWelcomeWindow.ShowUIManagerWelcome();
-                return;
-            }
-            
-            Selection.activeObject = settings;
-            EditorGUIUtility.PingObject(settings);
-        }
-        
         [MenuItem("Framework/Excel/打开Excel生成器配置", false, 100)]
         public static void OpenExcelGeneratorSettings()
         {
