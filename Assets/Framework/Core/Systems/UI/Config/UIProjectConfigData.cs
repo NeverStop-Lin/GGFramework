@@ -9,26 +9,26 @@ namespace Framework.Core
     public static partial class UIProjectConfigData
     {
         #region Partial 方法声明（供外部实现）
-        
+
         /// <summary>
         /// 外部提供的分辨率配置
         /// </summary>
         static partial void GetResolutionExternal(ref int width, ref int height, ref float match);
-        
+
         /// <summary>
         /// 外部提供的层级定义配置
         /// </summary>
         static partial void GetLayerDefinitionsExternal(ref List<UILayerDefinition> layers);
-        
+
         /// <summary>
         /// 外部提供的UI实例配置
         /// </summary>
         static partial void GetUIConfigsExternal(ref List<UIInstanceConfig> configs);
-        
+
         #endregion
-        
+
         #region Canvas 设计尺寸
-        
+
         /// <summary>
         /// Canvas参考分辨率宽度
         /// </summary>
@@ -43,7 +43,7 @@ namespace Framework.Core
                 return width;
             }
         }
-        
+
         /// <summary>
         /// Canvas参考分辨率高度
         /// </summary>
@@ -58,7 +58,7 @@ namespace Framework.Core
                 return height;
             }
         }
-        
+
         /// <summary>
         /// 屏幕匹配模式
         /// </summary>
@@ -73,11 +73,11 @@ namespace Framework.Core
                 return match;
             }
         }
-        
+
         #endregion
-        
+
         #region 层级定义
-        
+
         /// <summary>
         /// 获取所有层级定义
         /// </summary>
@@ -88,40 +88,40 @@ namespace Framework.Core
             {
                 new UILayerDefinition
                 {
-                    LayerName = "Main",
+                    LayerName = "Background",
                     BaseSortingOrder = 0,
+                    Description = "背景层级，用于背景UI"
+                },
+                new UILayerDefinition
+                {
+                    LayerName = "Main",
+                    BaseSortingOrder = 1000,
                     Description = "主界面层级，用于全屏UI"
                 },
                 new UILayerDefinition
                 {
                     LayerName = "Popup",
-                    BaseSortingOrder = 1000,
+                    BaseSortingOrder = 2000,
                     Description = "弹窗层级，用于弹出式UI"
                 },
                 new UILayerDefinition
                 {
                     LayerName = "Top",
-                    BaseSortingOrder = 2000,
+                    BaseSortingOrder = 3000,
                     Description = "顶层层级，用于始终显示在最上层的UI"
-                },
-                new UILayerDefinition
-                {
-                    LayerName = "Frame",
-                    BaseSortingOrder = 9900,
-                    Description = "框架级别"
                 }
             };
-            
+
             // 允许外部扩展/覆盖
             GetLayerDefinitionsExternal(ref layers);
-            
+
             return layers;
         }
-        
+
         #endregion
-        
+
         #region UI配置
-        
+
         /// <summary>
         /// 获取所有UI实例配置
         /// </summary>
@@ -129,13 +129,13 @@ namespace Framework.Core
         {
             // 默认为空列表
             var configs = new List<UIInstanceConfig>();
-            
+
             // 允许外部扩展/覆盖
             GetUIConfigsExternal(ref configs);
-            
+
             return configs;
         }
-        
+
         #endregion
     }
 }

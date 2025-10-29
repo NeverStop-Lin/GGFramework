@@ -544,13 +544,21 @@ namespace Framework.Editor.Core
                 Selection.activeObject = config;
                 EditorGUIUtility.PingObject(config);
                 
-                // 如果是UI管理器配置，打开初始化向导
+                // 根据配置类型执行后续操作
                 if (_configType == ConfigType.UIManager && config is UI.UIManagerSettings uiSettings)
                 {
-                    // 延迟调用，确保当前窗口关闭后再打开新窗口
+                    // UI管理器：打开初始化向导
                     EditorApplication.delayCall += () =>
                     {
                         UI.UIManagerSetupWizard.ShowWizard(uiSettings);
+                    };
+                }
+                else if (_configType == ConfigType.ExcelGenerator && config is Excel.ExcelGeneratorSettings)
+                {
+                    // Excel生成器：直接打开主窗口
+                    EditorApplication.delayCall += () =>
+                    {
+                        Excel.ExcelGeneratorWindow.ShowWindow();
                     };
                 }
                 

@@ -54,9 +54,29 @@ namespace Framework.Editor.UI
             var settings = UIManagerSettings.Instance;
             if (settings == null)
             {
-                Debug.Log("[UIManager] UI管理器配置不存在，显示欢迎窗口");
-                Core.SettingsWelcomeWindow.ShowUIManagerWelcome();
-                return false; // 不打开主窗口
+                // 步骤2.1：检查默认路径是否有配置文件
+                var defaultSettingsPath = Core.FrameworkDefaultPaths.GetUIManagerSettingsPath();
+                var defaultSettings = AssetDatabase.LoadAssetAtPath<UIManagerSettings>(defaultSettingsPath);
+                
+                if (defaultSettings != null)
+                {
+                    // 默认路径存在配置文件，自动关联到索引
+                    Debug.Log($"[UIManager] 在默认路径发现配置文件，自动关联: {defaultSettingsPath}");
+                    var index = Core.FrameworkSettingsIndex.GetOrCreate();
+                    index.UIManagerSettings = defaultSettings;
+                    index.Save();
+                    
+                    // 刷新实例
+                    UIManagerSettings.Reload();
+                    settings = UIManagerSettings.Instance;
+                }
+                else
+                {
+                    // 默认路径也没有配置文件，显示欢迎窗口
+                    Debug.Log("[UIManager] UI管理器配置不存在，显示欢迎窗口");
+                    Core.SettingsWelcomeWindow.ShowUIManagerWelcome();
+                    return false; // 不打开主窗口
+                }
             }
             
             // 步骤3：检查是否已完成初始化

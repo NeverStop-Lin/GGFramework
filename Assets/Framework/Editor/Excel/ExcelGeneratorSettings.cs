@@ -98,6 +98,13 @@ namespace Framework.Editor.Excel
             }
         }
         
+        /// <summary>
+        /// 重新加载配置
+        /// </summary>
+        public static void Reload()
+        {
+            Core.FrameworkSettingsIndex.Reload();
+        }
         
         /// <summary>
         /// JSON输出文件夹对象引用

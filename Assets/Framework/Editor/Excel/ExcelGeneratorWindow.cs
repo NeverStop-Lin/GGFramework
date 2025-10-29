@@ -49,9 +49,28 @@ namespace Framework.Editor.Excel
             var settings = ExcelGeneratorSettings.Instance;
             if (settings == null)
             {
-                // 配置不存在，显示欢迎窗口
-                Core.SettingsWelcomeWindow.ShowExcelGeneratorWelcome();
-                return;
+                // 检查默认路径是否有配置文件
+                var defaultSettingsPath = Core.FrameworkDefaultPaths.GetExcelGeneratorSettingsPath();
+                var defaultSettings = AssetDatabase.LoadAssetAtPath<ExcelGeneratorSettings>(defaultSettingsPath);
+                
+                if (defaultSettings != null)
+                {
+                    // 默认路径存在配置文件，自动关联到索引
+                    Debug.Log($"[ExcelGenerator] 在默认路径发现配置文件，自动关联: {defaultSettingsPath}");
+                    var index = Core.FrameworkSettingsIndex.GetOrCreate();
+                    index.ExcelGeneratorSettings = defaultSettings;
+                    index.Save();
+                    
+                    // 刷新实例
+                    ExcelGeneratorSettings.Reload();
+                    settings = ExcelGeneratorSettings.Instance;
+                }
+                else
+                {
+                    // 默认路径也没有配置文件，显示欢迎窗口
+                    Core.SettingsWelcomeWindow.ShowExcelGeneratorWelcome();
+                    return;
+                }
             }
             
             // 直接打开主窗口（无论是否初始化完成）
