@@ -1,5 +1,4 @@
 using Framework.Scripts;
-using Game.UI;
 using UnityEngine;
 
 namespace Framework.Scripts

@@ -66,43 +66,33 @@ namespace Framework.Editor.UI
             sb.AppendLine($"namespace {@namespace}");
             sb.AppendLine("{");
             
-            // 类定义
+            // 类定义 - partial class
             sb.AppendLine("    /// <summary>");
             sb.AppendLine("    /// UI项目配置数据（自动生成）");
+            sb.AppendLine("    /// 通过 partial 方法实现配置注入");
             sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public static partial class UIProjectConfigData");
             sb.AppendLine("    {");
             
-            // Canvas 分辨率配置
-            sb.AppendLine("        #region Canvas 设计尺寸");
-            sb.AppendLine();
+            // 实现分辨率 partial 方法
             sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// Canvas参考分辨率宽度");
+            sb.AppendLine("        /// 提供外部分辨率配置");
             sb.AppendLine("        /// </summary>");
-            sb.AppendLine($"        public static int ReferenceResolutionWidth => {config.ReferenceResolutionWidth};");
-            sb.AppendLine();
-            sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// Canvas参考分辨率高度");
-            sb.AppendLine("        /// </summary>");
-            sb.AppendLine($"        public static int ReferenceResolutionHeight => {config.ReferenceResolutionHeight};");
-            sb.AppendLine();
-            sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// 屏幕匹配模式");
-            sb.AppendLine("        /// </summary>");
-            sb.AppendLine($"        public static float MatchWidthOrHeight => {config.MatchWidthOrHeight}f;");
-            sb.AppendLine();
-            sb.AppendLine("        #endregion");
+            sb.AppendLine("        static partial void GetResolutionExternal(ref int width, ref int height, ref float match)");
+            sb.AppendLine("        {");
+            sb.AppendLine($"            width = {config.ReferenceResolutionWidth};");
+            sb.AppendLine($"            height = {config.ReferenceResolutionHeight};");
+            sb.AppendLine($"            match = {config.MatchWidthOrHeight}f;");
+            sb.AppendLine("        }");
             sb.AppendLine();
             
-            // 层级定义
-            sb.AppendLine("        #region 层级定义");
-            sb.AppendLine();
+            // 实现层级定义 partial 方法
             sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// 获取所有层级定义");
+            sb.AppendLine("        /// 提供外部层级定义配置");
             sb.AppendLine("        /// </summary>");
-            sb.AppendLine("        public static List<UILayerDefinition> GetLayerDefinitions()");
+            sb.AppendLine("        static partial void GetLayerDefinitionsExternal(ref List<UILayerDefinition> layers)");
             sb.AppendLine("        {");
-            sb.AppendLine("            return new List<UILayerDefinition>");
+            sb.AppendLine("            layers = new List<UILayerDefinition>");
             sb.AppendLine("            {");
             
             foreach (var layer in config.LayerDefinitions)
@@ -118,18 +108,14 @@ namespace Framework.Editor.UI
             sb.AppendLine("            };");
             sb.AppendLine("        }");
             sb.AppendLine();
-            sb.AppendLine("        #endregion");
-            sb.AppendLine();
             
-            // UI配置
-            sb.AppendLine("        #region UI配置");
-            sb.AppendLine();
+            // 实现UI配置 partial 方法
             sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// 获取所有UI实例配置");
+            sb.AppendLine("        /// 提供外部UI实例配置");
             sb.AppendLine("        /// </summary>");
-            sb.AppendLine("        public static List<UIInstanceConfig> GetUIConfigs()");
+            sb.AppendLine("        static partial void GetUIConfigsExternal(ref List<UIInstanceConfig> configs)");
             sb.AppendLine("        {");
-            sb.AppendLine("            return new List<UIInstanceConfig>");
+            sb.AppendLine("            configs = new List<UIInstanceConfig>");
             sb.AppendLine("            {");
             
             foreach (var uiConfig in config.UIConfigs)
@@ -148,8 +134,6 @@ namespace Framework.Editor.UI
             
             sb.AppendLine("            };");
             sb.AppendLine("        }");
-            sb.AppendLine();
-            sb.AppendLine("        #endregion");
             
             // 类结束
             sb.AppendLine("    }");
