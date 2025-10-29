@@ -13,7 +13,6 @@ namespace Framework.Editor.UI
     {
         private UIManagerSettings _settings;
         private string _defaultNamespace;
-        private string _logicOutputPath;
         private UIProjectConfig _currentConfig;
         private UIManagerWindow _parentWindow;
         private Vector2 _scrollPosition;
@@ -28,7 +27,6 @@ namespace Framework.Editor.UI
             if (_settings != null)
             {
                 _defaultNamespace = _settings.DefaultNamespace;
-                _logicOutputPath = _settings.LogicScriptOutputPath;
             }
             
             // 加载UI项目配置
@@ -247,38 +245,71 @@ namespace Framework.Editor.UI
             
             if (_settings != null)
             {
-                // UI创建默认路径
+                // UI创建默认目录（Object引用）
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField("默认创建路径:", GUILayout.Width(120));
+                EditorGUILayout.LabelField("默认创建目录:", GUILayout.Width(120));
                 
-                var oldColor = GUI.backgroundColor;
-                GUI.backgroundColor = new Color(0.8f, 1f, 0.8f);
-                EditorGUILayout.TextField(_settings.UIPrefabCreationDefaultPath);
-                GUI.backgroundColor = oldColor;
+                var newCreationFolder = EditorGUILayout.ObjectField(
+                    _settings.UIPrefabCreationFolder, 
+                    typeof(DefaultAsset), 
+                    false
+                ) as DefaultAsset;
                 
-                if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                if (newCreationFolder != _settings.UIPrefabCreationFolder)
                 {
-                    var path = EditorUtility.OpenFolderPanel("选择UI创建默认目录", _settings.UIPrefabCreationDefaultPath, "");
-                    if (!string.IsNullOrEmpty(path) && path.StartsWith(UnityEngine.Application.dataPath))
+                    _settings.UIPrefabCreationFolder = newCreationFolder;
+                    
+                    // 确保添加到Prefab目录列表
+                    if (newCreationFolder != null && !_settings.PrefabFolders.Contains(newCreationFolder))
                     {
-                        var relativePath = "Assets" + path.Substring(UnityEngine.Application.dataPath.Length);
-                        _settings.UIPrefabCreationDefaultPath = relativePath;
+                        _settings.PrefabFolders.Add(newCreationFolder);
+                    }
+                    
+                    _settings.Save();
+                }
+                
+                // 浏览按钮（树状结构）
+                if (GUILayout.Button("浏览...", GUILayout.Width(60)))
+                {
+                    var folder = BrowseFolder("选择UI创建默认目录", _settings.UIPrefabCreationDefaultPath);
+                    if (folder != null)
+                    {
+                        _settings.UIPrefabCreationFolder = folder;
                         
                         // 确保添加到Prefab目录列表
-                        if (!_settings.PrefabDirectories.Contains(relativePath))
+                        if (!_settings.PrefabFolders.Contains(folder))
                         {
-                            _settings.PrefabDirectories.Add(relativePath);
+                            _settings.PrefabFolders.Add(folder);
                         }
                         
                         _settings.Save();
                     }
                 }
+                
+                // 在Finder/Explorer中显示
+                if (GUILayout.Button("显示", GUILayout.Width(60)))
+                {
+                    if (_settings.UIPrefabCreationFolder != null)
+                    {
+                        var path = AssetDatabase.GetAssetPath(_settings.UIPrefabCreationFolder);
+                        EditorUtility.RevealInFinder(path);
+                    }
+                    else
+                    {
+                        EditorUtility.DisplayDialog("提示", "请先设置UI创建目录", "确定");
+                    }
+                }
                 EditorGUILayout.EndHorizontal();
                 
                 EditorGUILayout.HelpBox(
-                    "💡 此路径用于创建新UI预制体时的默认保存位置\n" +
+                    "💡 使用文件夹引用（三种选择方式）\n" +
+                    "  1. 拖拽文件夹到输入框\n" +
+                    "  2. 点击【浏览...】按钮（树状文件夹浏览器）⭐\n" +
+                    "  3. 点击输入框右侧⊙按钮从项目中选择\n\n" +
+                    "• 此路径用于创建新UI预制体时的默认保存位置\n" +
                     "• 该路径会自动添加到Prefab目录列表中\n" +
-                    "• 在UI管理Tab中，此路径标记为[默认创建路径]且不可删除",
+                    "• 在UI管理Tab中，此路径标记为[默认创建路径]且不可删除\n" +
+                    "• 点击【显示】按钮在资源管理器中打开",
                     MessageType.Info
                 );
             }
@@ -411,30 +442,113 @@ namespace Framework.Editor.UI
             
             EditorGUILayout.BeginVertical("box");
             
-            // 默认命名空间
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("默认命名空间:", GUILayout.Width(120));
-            _defaultNamespace = EditorGUILayout.TextField(_defaultNamespace);
-            EditorGUILayout.EndHorizontal();
-            
-            // 逻辑脚本输出路径
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("逻辑脚本路径:", GUILayout.Width(120));
-            _logicOutputPath = EditorGUILayout.TextField(_logicOutputPath);
-            if (GUILayout.Button("浏览", GUILayout.Width(60)))
+            if (_settings != null)
             {
-                var path = EditorUtility.OpenFolderPanel("选择逻辑脚本输出目录", _logicOutputPath, "");
-                if (!string.IsNullOrEmpty(path) && path.StartsWith(UnityEngine.Application.dataPath))
+                // 默认命名空间
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("默认命名空间:", GUILayout.Width(120));
+                _defaultNamespace = EditorGUILayout.TextField(_defaultNamespace);
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Space(5);
+                
+                // 逻辑脚本输出文件夹（Object引用）
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("逻辑脚本目录:", GUILayout.Width(120));
+                var newLogicFolder = EditorGUILayout.ObjectField(
+                    _settings.LogicScriptOutputFolder, 
+                    typeof(DefaultAsset), 
+                    false
+                ) as DefaultAsset;
+                
+                if (newLogicFolder != _settings.LogicScriptOutputFolder)
                 {
-                    _logicOutputPath = "Assets" + path.Substring(UnityEngine.Application.dataPath.Length);
+                    _settings.LogicScriptOutputFolder = newLogicFolder;
                 }
+                
+                // 浏览按钮（树状结构）
+                if (GUILayout.Button("浏览...", GUILayout.Width(60)))
+                {
+                    var folder = BrowseFolder("选择逻辑脚本输出目录", _settings.LogicScriptOutputPath);
+                    if (folder != null)
+                    {
+                        _settings.LogicScriptOutputFolder = folder;
+                    }
+                }
+                
+                // 在Finder/Explorer中显示
+                if (GUILayout.Button("显示", GUILayout.Width(60)))
+                {
+                    if (_settings.LogicScriptOutputFolder != null)
+                    {
+                        var path = AssetDatabase.GetAssetPath(_settings.LogicScriptOutputFolder);
+                        EditorUtility.RevealInFinder(path);
+                    }
+                    else
+                    {
+                        EditorUtility.DisplayDialog("提示", "请先设置逻辑脚本目录", "确定");
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Space(5);
+                
+                // 绑定脚本输出文件夹（Object引用）
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("绑定脚本目录:", GUILayout.Width(120));
+                var newBindingFolder = EditorGUILayout.ObjectField(
+                    _settings.BindingScriptOutputFolder, 
+                    typeof(DefaultAsset), 
+                    false
+                ) as DefaultAsset;
+                
+                if (newBindingFolder != _settings.BindingScriptOutputFolder)
+                {
+                    _settings.BindingScriptOutputFolder = newBindingFolder;
+                }
+                
+                // 浏览按钮（树状结构）
+                if (GUILayout.Button("浏览...", GUILayout.Width(60)))
+                {
+                    var folder = BrowseFolder("选择绑定脚本输出目录", _settings.BindingScriptOutputPath);
+                    if (folder != null)
+                    {
+                        _settings.BindingScriptOutputFolder = folder;
+                    }
+                }
+                
+                // 在Finder/Explorer中显示
+                if (GUILayout.Button("显示", GUILayout.Width(60)))
+                {
+                    if (_settings.BindingScriptOutputFolder != null)
+                    {
+                        var path = AssetDatabase.GetAssetPath(_settings.BindingScriptOutputFolder);
+                        EditorUtility.RevealInFinder(path);
+                    }
+                    else
+                    {
+                        EditorUtility.DisplayDialog("提示", "请先设置绑定脚本目录", "确定");
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Space(5);
+                
+                EditorGUILayout.HelpBox(
+                    "💡 使用文件夹引用（三种选择方式）\n" +
+                    "  1. 拖拽文件夹到输入框\n" +
+                    "  2. 点击【浏览...】按钮（树状文件夹浏览器）⭐\n" +
+                    "  3. 点击输入框右侧⊙按钮从项目中选择\n\n" +
+                    "• 逻辑脚本：UI业务代码输出位置\n" +
+                    "• 绑定脚本：自动生成的绑定代码位置\n" +
+                    "• 点击【显示】按钮在资源管理器中打开",
+                    MessageType.Info
+                );
             }
-            EditorGUILayout.EndHorizontal();
-            
-            EditorGUILayout.HelpBox(
-                "逻辑脚本路径：UI业务代码（.cs）输出位置",
-                MessageType.Info
-            );
+            else
+            {
+                EditorGUILayout.HelpBox("未加载编辑器设置", MessageType.Warning);
+            }
             
             EditorGUILayout.EndVertical();
         }
@@ -462,9 +576,11 @@ namespace Framework.Editor.UI
         
         private void SaveSettings()
         {
-            _settings.DefaultNamespace = _defaultNamespace;
-            _settings.LogicScriptOutputPath = _logicOutputPath;
-            _settings.Save();
+            if (_settings != null)
+            {
+                _settings.DefaultNamespace = _defaultNamespace;
+                _settings.Save();
+            }
             
             // 保存配置数据（触发代码生成）
             if (_currentConfig != null)
@@ -485,12 +601,53 @@ namespace Framework.Editor.UI
         
         public string GetLogicOutputPath()
         {
-            return _logicOutputPath;
+            return _settings?.LogicScriptOutputPath ?? "";
         }
         
         public UIProjectConfig GetCurrentConfig()
         {
             return _currentConfig;
+        }
+        
+        /// <summary>
+        /// 浏览文件夹（树状结构）
+        /// </summary>
+        private DefaultAsset BrowseFolder(string title, string defaultPath)
+        {
+            if (string.IsNullOrEmpty(defaultPath))
+            {
+                defaultPath = "Assets";
+            }
+            
+            // 使用系统文件浏览器选择文件夹（树状结构）
+            var selectedPath = EditorUtility.OpenFolderPanel(
+                title,
+                defaultPath,
+                ""
+            );
+            
+            if (string.IsNullOrEmpty(selectedPath))
+                return null;
+            
+            // 转换为相对路径
+            if (!selectedPath.StartsWith(UnityEngine.Application.dataPath))
+            {
+                EditorUtility.DisplayDialog("错误", "文件夹必须在Assets目录下", "确定");
+                return null;
+            }
+            
+            var relativePath = "Assets" + selectedPath.Substring(UnityEngine.Application.dataPath.Length);
+            
+            // 加载文件夹
+            var folder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(relativePath);
+            
+            if (folder == null)
+            {
+                EditorUtility.DisplayDialog("错误", "选择的不是有效的文件夹", "确定");
+                return null;
+            }
+            
+            return folder;
         }
     }
 }

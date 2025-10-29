@@ -31,10 +31,24 @@ namespace Framework.Editor.UI
         
         private void OnEnable()
         {
-            // 确保编辑器配置存在（固定位置，自动创建）
-            EnsureManagerSettingsExists();
+            // 检查配置索引是否存在
+            if (!Core.FrameworkSettingsIndex.Exists())
+            {
+                Debug.Log("[UIManager] 配置索引不存在，创建索引文件");
+                Core.FrameworkSettingsIndex.GetOrCreate();
+            }
             
-            // 确保配置代码文件存在（自动生成）
+            // 检查UI管理器配置是否存在
+            var settings = UIManagerSettings.Instance;
+            if (settings == null)
+            {
+                Debug.Log("[UIManager] UI管理器配置不存在，显示欢迎窗口");
+                Core.SettingsWelcomeWindow.ShowUIManagerWelcome();
+                Close();
+                return;
+            }
+            
+            // 确保配置代码文件存在
             EnsureConfigCodeExists();
             
             // 确保UI模板存在
@@ -51,40 +65,6 @@ namespace Framework.Editor.UI
             _uiManagementTab.OnEnable();
             _layerConfigTab.OnEnable();
             _settingsTab.OnEnable();
-        }
-        
-        /// <summary>
-        /// 确保编辑器配置存在
-        /// </summary>
-        private void EnsureManagerSettingsExists()
-        {
-            var settingsPath = "Assets/Editor/Framework/Configs/UIManagerSettings.asset";
-            var settings = AssetDatabase.LoadAssetAtPath<UIManagerSettings>(settingsPath);
-            
-            if (settings == null)
-            {
-                // 自动创建
-                var dir = System.IO.Path.GetDirectoryName(settingsPath);
-                if (!System.IO.Directory.Exists(dir))
-                {
-                    System.IO.Directory.CreateDirectory(dir);
-                }
-                
-                settings = ScriptableObject.CreateInstance<UIManagerSettings>();
-                AssetDatabase.CreateAsset(settings, settingsPath);
-                AssetDatabase.SaveAssets();
-            }
-            
-            // 确保默认创建路径已添加到Prefab目录列表
-            if (!string.IsNullOrEmpty(settings.UIPrefabCreationDefaultPath))
-            {
-                if (!settings.PrefabDirectories.Contains(settings.UIPrefabCreationDefaultPath))
-                {
-                    settings.PrefabDirectories.Add(settings.UIPrefabCreationDefaultPath);
-                    EditorUtility.SetDirty(settings);
-                    AssetDatabase.SaveAssets();
-                }
-            }
         }
         
         /// <summary>

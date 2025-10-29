@@ -12,11 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5d378b673ff84e47a18d91128353559, type: 3}
   m_Name: UIManagerSettings
   m_EditorClassIdentifier: 
-  ConfigCodeFilePath: Assets/Game/Scripts/Generated/UIProjectConfigData.cs
-  DefaultNamespace: Game.UI
-  LogicScriptOutputPath: Assets/Game/Scripts/UI
-  BindingScriptOutputPath: Assets/Game/Scripts/UI/Generated
-  OpenAfterGenerate: 0
-  UIPrefabCreationDefaultPath: Assets/Game/Resources/UI
-  PrefabDirectories:
-  - Assets/Game/Resources/UI
+  _configCodeFile: {fileID: 0}
+  _defaultNamespace: Game.UI
+  _logicScriptOutputFolder: {fileID: 0}
+  _bindingScriptOutputFolder: {fileID: 0}
+  _openAfterGenerate: 0
+  _uiPrefabCreationFolder: {fileID: 0}
+  _prefabFolders: []
