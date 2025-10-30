@@ -5,20 +5,19 @@ namespace Framework.Core
     public class StorageCenter : IStorage
     {
 
-        [Inject]
-        StorageOptions _options;
+      [Inject]  StorageOptions _options;
 
         readonly IStorage _storage;
-        
+
         StorageCenter()
         {
             switch (_options.storageType)
             {
                 default:
-                {
-                    _storage = new PlayerPrefsStorage();
-                    break;
-                }
+                    {
+                        _storage = new PlayerPrefsStorage();
+                        break;
+                    }
             }
             ((BaseClass<StorageOptions>)_storage)?.Initialize(_options);
         }

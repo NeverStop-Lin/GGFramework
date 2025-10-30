@@ -10,8 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 560171869429444338}
   - component: {fileID: 264578058}
-  - component: {fileID: 1865044404}
-  - component: {fileID: 4142674398903957237}
   m_Layer: 0
   m_Name: Framework
   m_TagString: Untagged
@@ -46,47 +44,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf6814913bfd47988eb008243a3b4dcc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &1865044404
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 560171869429444341}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5fc14287db52f2849b60dd5b88a35874, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &4142674398903957237
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 560171869429444341}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 89715ad69b973a14899afa2c6730b30b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _scriptableObjectInstallers:
-  - {fileID: 11400000, guid: 4254b09205cdb1741a2b86c659f29bb7, type: 2}
-  _monoInstallers: []
-  _installerPrefabs: []
-  _autoRun: 1
-  OnPreInstall:
-    m_PersistentCalls:
-      m_Calls: []
-  OnPostInstall:
-    m_PersistentCalls:
-      m_Calls: []
-  OnPreResolve:
-    m_PersistentCalls:
-      m_Calls: []
-  OnPostResolve:
-    m_PersistentCalls:
-      m_Calls: []
-  _parentNewObjectsUnderSceneContext: 0
-  _contractNames: []
-  _parentContractNames: []

@@ -15,7 +15,7 @@ namespace Framework.UI.Templates
 
         protected override void OnCreate(params object[] args)
         {
-            _timer = GridFramework.Timer.GetOrCreate(this, "showToast");
+            _timer = GGF.Timer.GetOrCreate(this, "showToast");
         }
 
         protected override void OnShow(params object[] args)

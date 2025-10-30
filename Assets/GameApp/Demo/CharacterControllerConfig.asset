@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b537ddd1bf4a214cb7f939bcc8e5eca, type: 3}
+  m_Name: CharacterControllerConfig
+  m_EditorClassIdentifier: 
+  "\u6700\u5927\u7A33\u5B9A\u79FB\u52A8\u901F\u5EA6": 10
+  "\u7A33\u5B9A\u79FB\u52A8\u9510\u5EA6": 15
+  "\u65B9\u5411\u63D2\u503C\u9510\u5EA6": 10
+  "\u6700\u5927\u7A7A\u4E2D\u79FB\u52A8\u901F\u5EA6": 15
+  "\u7A7A\u4E2D\u52A0\u901F\u5EA6": 15
+  "\u7A7A\u4E2D\u963B\u529B": 0.1
+  "\u91CD\u529B": {x: 0, y: -30, z: 0}
+  "\u659C\u5761\u53EF\u8DF3": 0
+  "\u8DF3\u8D77\u901F\u5EA6": 10
+  "\u8DF3\u8DC3\u524D\u5411\u901F\u5EA6": 10
+  "\u6700\u5927\u8DF3\u8DC3\u6B21\u6570": 2
+  "\u571F\u72FC\u65F6\u95F4": 0.1
+  "\u8DF3\u8DC3\u7F13\u51B2\u65F6\u95F4": 0.1
+  "\u98DE\u6251\u521D\u901F\u5EA6": 12
+  "\u98DE\u6251\u6301\u7EED\u65F6\u95F4": 0.25
+  "\u98DE\u6251\u8870\u51CF": 12
+  "\u98DE\u6251\u51B7\u5374\u65F6\u95F4": 0.5
+  "\u7A7A\u4E2D\u98DE\u6251\u6D88\u8017\u4E00\u6B21\u8DF3\u8DC3": 1
+  "\u8E72\u4F0F\u8EAB\u9AD8": 1
+  "\u7AD9\u7ACB\u8EAB\u9AD8": 2
+  "\u80F6\u56CA\u534A\u5F84": 0.5
+  "\u8E72\u4F0F\u79FB\u52A8\u901F\u5EA6\u500D\u7387": 0.5
+  "\u68AF\u5B50\u68C0\u6D4B\u534A\u5F84": 0.4
+  "\u68AF\u5B50\u68C0\u6D4B\u8DDD\u79BB": 0.8
+  "\u722C\u68AF\u5B50\u901F\u5EA6": 4
+  "\u68AF\u5B50Tag": Ladder
+  "\u68AF\u5B50\u5C42":
+    serializedVersion: 2
+    m_Bits: 192
+  "\u53EF\u722C\u5899\u5C42":
+    serializedVersion: 2
+    m_Bits: 0
+  "\u53EF\u722C\u5899\u6700\u5927\u8868\u9762\u89D2\u5EA6": 75
+  "\u8D34\u5899\u68C0\u6D4B\u8DDD\u79BB": 0.6
+  "\u4E0B\u6ED1\u901F\u5EA6": 2.5
+  "\u6293\u5899\u6700\u4E45\u65F6\u95F4": 3
+  "\u767B\u5899\u8DF3\u4E0A\u5347\u901F\u5EA6": 10
+  "\u767B\u5899\u8DF3\u540E\u9000\u901F\u5EA6": 8

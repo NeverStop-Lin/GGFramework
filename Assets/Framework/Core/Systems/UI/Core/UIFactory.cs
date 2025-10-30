@@ -1,6 +1,7 @@
 using System;
 using Framework.Scripts;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Zenject;
 
 namespace Framework.Core
@@ -11,13 +12,15 @@ namespace Framework.Core
     /// </summary>
     public class UIFactory : IFactory<Type, IBaseUI>
     {
-        private readonly DiContainer _container;
+        private readonly DiContainer _projectContainer;
         private readonly IResource _resource;
+        private readonly SceneContextRegistry _sceneRegistry;
         
-        public UIFactory(DiContainer container, IResource resource)
+        public UIFactory(DiContainer container, IResource resource, SceneContextRegistry sceneRegistry)
         {
-            _container = container;
+            _projectContainer = container;
             _resource = resource;
+            _sceneRegistry = sceneRegistry;
         }
         
         public IBaseUI Create(Type uiType)
@@ -64,8 +67,24 @@ namespace Framework.Core
                 // 获取UIRoot
                 var uiRoot = UIRootManager.GetOrCreateUIRoot();
                 
-                // 实例化Prefab（Zenject自动注入）
-                var go = _container.InstantiatePrefab(prefab, uiRoot);
+                // 获取当前活动场景的容器（优先使用 SceneContext，回退到 ProjectContext）
+                var activeScene = SceneManager.GetActiveScene();
+                var sceneContainer = _sceneRegistry.TryGetContainerForScene(activeScene);
+                
+                GameObject go;
+                if (sceneContainer != null)
+                {
+                    // 使用 SceneContext 容器实例化（可以访问场景绑定）
+                    FrameworkLogger.Info($"[UIFactory] 使用 SceneContext 容器创建 UI: {uiType.Name}");
+                    go = sceneContainer.InstantiatePrefab(prefab, uiRoot);
+                }
+                else
+                {
+                    // 回退到 ProjectContext（如果没有场景容器）
+                    FrameworkLogger.Warn($"[UIFactory] 场景无 SceneContext，回退到 ProjectContext 创建 UI: {uiType.Name}");
+                    go = _projectContainer.InstantiatePrefab(prefab, uiRoot);
+                }
+                
                 go.name = uiType.Name; // 设置名称为UI类名
                 
                 // 确保 Canvas 启用 overrideSorting，让 CanvasScaler 等组件正常工作

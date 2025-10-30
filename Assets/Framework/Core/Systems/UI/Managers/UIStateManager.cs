@@ -95,7 +95,7 @@ namespace Framework.Core
             
             try
             {
-                GridFramework.Storage.Save(key, state.ToString());
+                GGF.Storage.Save(key, state.ToString());
                 
                 FrameworkLogger.Info($"[UIState] 保存状态: {uiType.Name} -> {state}");
             }
@@ -114,7 +114,7 @@ namespace Framework.Core
             
             try
             {
-                var data = GridFramework.Storage.Load<string>(key);
+                var data = GGF.Storage.Load<string>(key);
                 if (!string.IsNullOrEmpty(data) && Enum.TryParse<UIRuntimeState>(data, out UIRuntimeState state))
                 {
                     FrameworkLogger.Info($"[UIState] 加载状态: {uiType.Name} -> {state}");
