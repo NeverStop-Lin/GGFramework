@@ -18,7 +18,7 @@ namespace Framework.Scripts
     /// </summary>
     public class GGF : MonoInstaller
     {
-        static DiContainer Container;
+        static new DiContainer Container;
 
         // ========== 核心系统访问接口 ==========
 

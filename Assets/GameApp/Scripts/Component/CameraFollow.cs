@@ -1,58 +1,126 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using Zenject;
+using Framework.Core.Attributes;
 
+/// <summary>
+/// 智能轨道跟随相机系统
+/// 
+/// 核心特性：
+/// - 双模态设计：手动轨道控制 + 自动构图跟随
+/// - 无缝切换：玩家输入立即切换到手动模式，松手后自动捕获构图并进入自动模式
+/// - 构图记忆：自动模式维持玩家最后一次手动调整的画面（水平半径和相对高度）
+/// - 弧线漂移：目标转向时，相机以平滑弧线重新对齐构图，产生电影感
+/// </summary>
 public class CameraFollow : MonoBehaviour
 {
-    // 跟随目标（必需）
-    public GameObject target;
-    // 期望和目标的距离（保持不变）
+    #region 配置参数
+    [Header("跟随设置")]
+    [Label("跟随目标", "相机位置围绕此目标做轨道运动（必需）")]
+    public GameObject followTarget;
+
+    [Label("注视目标", "相机朝向注视的目标（可选，为空时与跟随目标相同）")]
+    public GameObject lookAtTarget;
+
+    [Label("跟随距离", "相机与跟随目标的固定距离")]
     public float distance = 10f;
-    // 轨道旋转的俯仰角范围（度）
+
+    [Header("轨道控制")]
+    [Label("俯仰角下限", "最小俯仰角（度），限制相机不会过度低头")]
     public float minPitchDeg = -30f;
+
+    [Label("俯仰角上限", "最大俯仰角（度），限制相机不会过度抬头")]
     public float maxPitchDeg = 80f;
-    // 轨道旋转灵敏度（外部传入增量的缩放）
+
+    [Label("水平灵敏度", "手动控制时的水平旋转灵敏度")]
     public float orbitSensitivityYaw = 1f;
+
+    [Label("垂直灵敏度", "手动控制时的垂直旋转灵敏度")]
     public float orbitSensitivityPitch = 1f;
 
-    // 内部状态：累计的 yaw/pitch 角（度）
+    [Header("平滑设置")]
+    [Label("角度平滑时间", "角度过渡的平滑时间（秒），越小响应越快")]
+    public float rotationSmoothTime = 0.1f;
+
+    [Label("位置平滑时间", "位置过渡的平滑时间（秒），越小响应越快")]
+    public float positionSmoothTime = 0.1f;
+
+    [Label("自动跟随速度", "自动模式下的角度追赶速度（度/秒）")]
+    public float autoFollowSpeed = 180f;
+    #endregion
+
+    #region 手动模式状态
+    // 当前累积的轨道角度（度）
     private float yawDeg;
     private float pitchDeg;
-    // 内部状态：本帧是否收到外部旋转输入
+
+    // 是否已根据初始位置初始化角度
+    private bool isOrbitInitialized;
+
+    // 平滑插值速度变量
+    private float yawVelocity;
+    private float pitchVelocity;
+    private Vector3 positionVelocity;
+    #endregion
+
+    #region 输入队列
+    // 本帧是否有外部输入
     private bool hasQueuedInput;
+
+    // 队列化的角度增量（度）
+
     private float queuedYawDelta;
     private float queuedPitchDelta;
-    // 是否已根据当前相机-目标向量初始化过角度
-    private bool orbitInitialized;
-    // 内部辅助：自动跟随时用于对齐的虚拟枢轴（仅运行时使用）
-    private Transform autoFollowPivot;
-    // 继承自由模式的约束：水平半径与相对高度（相对目标）
-    private float preservedFlatRadius;
-    private float preservedRelativeY;
-    private bool autoConstraintsCaptured;
-    // Start is called before the first frame update
+    #endregion
 
-    [Inject] GamePlayInput gamePlayInput;
-    void Start()
+    #region 自动模式状态
+    // 是否已捕获构图（进入自动模式时捕获）
+    private bool isCompositionCaptured;
+
+    // 捕获的水平环绕半径（忽略Y轴的距离）
+
+    private float capturedHorizontalRadius;
+
+    // 捕获的相对高度（相机Y - 目标Y）
+
+    private float capturedRelativeHeight;
+    #endregion
+
+
+
+    #region Unity 生命周期
+    private void LateUpdate()
     {
-        // 运行时创建内部辅助节点（仅作为计算参照物，不依赖外部）
-        GameObject pivot = new GameObject("CameraFollow_AutoPivot");
-        autoFollowPivot = pivot.transform;
-        autoFollowPivot.SetPositionAndRotation(transform.position, transform.rotation);
+        // 验证目标有效性
+        ValidateTarget();
+
+        // 缓存目标位置（避免重复访问 transform.position）
+        Vector3 followTargetPos = followTarget.transform.position;
+        Vector3 lookAtTargetPos = lookAtTarget != null 
+            ? lookAtTarget.transform.position 
+            : followTargetPos;
+
+        // 确保轨道角度已初始化
+        EnsureOrbitInitialized(followTargetPos);
+
+        // 确定本帧的输入来源（手动 or 自动）
+        (float yawDelta, float pitchDelta, bool isAutoMode) = DetermineFrameInput(followTargetPos);
+
+        // 应用旋转（带平滑插值）
+        ApplyRotation(yawDelta, pitchDelta);
+
+        // 更新相机位置（带平滑插值）
+        UpdateCameraPosition(isAutoMode, followTargetPos, lookAtTargetPos);
+
+        // 清空输入队列
+        ClearInputQueue();
     }
+    #endregion
 
-    private void Update()
-    {
-        if (gamePlayInput.IsTouchCameraRotateArea)
-        {
-            QueueYawPitchInput(gamePlayInput.CameraRotateInput.x, gamePlayInput.CameraRotateInput.y);
-        }
-    }
-
-
-    // 外部方法：队列化本帧的 yaw/pitch 增量（单位：度），会在 LateUpdate 中被消费
-    // 说明：建议由外部把输入（例如鼠标/手柄）换算为每帧的角度增量后调用本方法
+    #region 公共接口
+    /// <summary>
+    /// 队列化本帧的 yaw/pitch 增量（单位：度）
+    /// 会在 LateUpdate 中被消费，并立即切换到手动模式
+    /// </summary>
     public void QueueYawPitchInput(float yawDelta, float pitchDelta)
     {
         // 参数校验（Fail Fast）
@@ -64,127 +132,212 @@ public class CameraFollow : MonoBehaviour
         {
             throw new System.ArgumentException($"Invalid pitchDelta: {pitchDelta}");
         }
+
         queuedYawDelta += yawDelta;
         queuedPitchDelta += pitchDelta;
         hasQueuedInput = true;
     }
 
-    // 外部方法：清空已队列的增量
+    /// <summary>
+    /// 清空已队列的输入增量
+    /// </summary>
     public void ClearYawPitchInput()
     {
         hasQueuedInput = false;
         queuedYawDelta = 0f;
         queuedPitchDelta = 0f;
     }
+    #endregion
 
-    // Update is called once per frame
-    void LateUpdate()
+    #region 核心逻辑
+    /// <summary>
+    /// 验证目标存在，缺失时立即抛出异常
+    /// </summary>
+    private void ValidateTarget()
     {
-        if (target == null)
+        if (followTarget == null)
         {
-            // 缺失必需对象，立即抛出（包含上下文信息）
-            throw new System.InvalidOperationException($"CameraFollow on '{gameObject.name}' requires a non-null target.");
-        }
-
-        EnsureOrbitInitialized();
-
-        // 统一输入通道：优先消费外部输入；若无外部输入，则根据“跟随模式”自动生成输入
-        float consumedYawDelta = 0f;
-        float consumedPitchDelta = 0f;
-        bool usedAutoInput = false;
-
-        if (hasQueuedInput)
-        {
-            consumedYawDelta = queuedYawDelta;
-            consumedPitchDelta = queuedPitchDelta;
-            // 收到外部输入，重置自动约束捕获
-            autoConstraintsCaptured = false;
-        }
-        else
-        {
-            // 计算跟随模式下期望的“相机参考位姿”（仅用于推导角度差）
-            float currentY = transform.position.y;
-            float targetY = target.transform.position.y;
-            Vector3 flatDirection = transform.position - target.transform.position;
-            flatDirection.y = 0f;
-            if (flatDirection.sqrMagnitude < 0.0001f)
-            {
-                flatDirection = Vector3.back;
-            }
-
-            // 首次进入自动模式时，捕获自由模式的水平半径与 Y
-            if (!autoConstraintsCaptured)
-            {
-                float flatRadius = new Vector2(flatDirection.x, flatDirection.z).magnitude;
-                preservedFlatRadius = Mathf.Max(0.0001f, flatRadius);
-                preservedRelativeY = currentY - targetY; // 相对目标的高度
-                autoConstraintsCaptured = true;
-            }
-
-            // 使用“当前水平朝向的单位向量”与“保留的半径/Y”构造期望位置
-            Vector3 desiredPos = target.transform.position + flatDirection.normalized * preservedFlatRadius;
-            desiredPos.y = targetY + preservedRelativeY;
-
-            autoFollowPivot.position = desiredPos;
-            autoFollowPivot.LookAt(target.transform.position);
-
-            // 由期望位置反解其 yaw/pitch
-            Vector3 targetPosForAuto = target.transform.position;
-            Vector3 offsetAuto = autoFollowPivot.position - targetPosForAuto;
-            Vector3 dirAuto = offsetAuto.normalized;
-
-            float desiredYaw = Mathf.Atan2(-dirAuto.x, -dirAuto.z) * Mathf.Rad2Deg;
-            float horizontalLenAuto = Mathf.Sqrt(dirAuto.x * dirAuto.x + dirAuto.z * dirAuto.z);
-            float desiredPitch = Mathf.Atan2(dirAuto.y, horizontalLenAuto) * Mathf.Rad2Deg;
-            desiredPitch = Mathf.Clamp(desiredPitch, minPitchDeg, maxPitchDeg);
-
-            // 转换为“输入增量”，走同一套轨道逻辑
-            consumedYawDelta = ShortestDeltaAngle(yawDeg, desiredYaw);
-            consumedPitchDelta = ShortestDeltaAngle(pitchDeg, desiredPitch);
-            usedAutoInput = true;
-        }
-
-        // 累计角度（度），应用灵敏度
-        yawDeg += consumedYawDelta * orbitSensitivityYaw;
-        pitchDeg += consumedPitchDelta * orbitSensitivityPitch;
-
-        // 清空输入队列
-        hasQueuedInput = false;
-        queuedYawDelta = 0f;
-        queuedPitchDelta = 0f;
-
-        // 夹角限制
-        pitchDeg = Mathf.Clamp(pitchDeg, minPitchDeg, maxPitchDeg);
-
-        // 计算新的相机位置：围绕目标以固定距离的轨道
-        {
-            Vector3 targetPos = target.transform.position;
-            float usedDistance = Mathf.Max(0.0001f, distance);
-            if (usedAutoInput)
-            {
-                // 调整半径以保持“水平半径”和“自由模式 Y”一致
-                float cosPitch = Mathf.Cos(pitchDeg * Mathf.Deg2Rad);
-                if (cosPitch < 0f) cosPitch = -cosPitch; // 仅需幅值
-                cosPitch = Mathf.Max(0.0001f, cosPitch);
-                usedDistance = preservedFlatRadius / cosPitch;
-            }
-
-            Vector3 offset = Quaternion.Euler(pitchDeg, yawDeg, 0f) * Vector3.back * usedDistance;
-            transform.position = targetPos + offset;
-            transform.LookAt(targetPos);
+            throw new System.InvalidOperationException(
+                $"CameraFollow on '{gameObject.name}' requires a non-null followTarget."
+            );
         }
     }
 
-    // 初始化轨道角度：基于当前相机与目标的相对向量，避免首次切换跳变
-    private void EnsureOrbitInitialized()
+    /// <summary>
+    /// 确定本帧的输入来源：手动输入 or 自动跟随
+    /// 返回：(yawDelta, pitchDelta, isAutoMode)
+    /// </summary>
+    private (float, float, bool) DetermineFrameInput(Vector3 followTargetPos)
     {
-        if (orbitInitialized)
+        if (hasQueuedInput)
+        {
+            // 有手动输入：立即切换到手动模式
+            // 重置自动模式的构图捕获状态
+            isCompositionCaptured = false;
+            return (queuedYawDelta, queuedPitchDelta, false);
+        }
+        else
+        {
+            // 无手动输入：进入自动跟随模式
+            (float yawDelta, float pitchDelta) = ComputeAutoFollowAngles(followTargetPos);
+            return (yawDelta, pitchDelta, true);
+        }
+    }
+
+    /// <summary>
+    /// 计算自动跟随模式下的角度增量
+    /// 目标：维持玩家最后一次手动设定的构图（水平半径 + 相对高度）
+    /// </summary>
+    private (float, float) ComputeAutoFollowAngles(Vector3 followTargetPos)
+    {
+        // 首次进入自动模式：捕获当前构图
+        if (!isCompositionCaptured)
+        {
+            Vector3 horizontalOffset = transform.position - followTargetPos;
+            horizontalOffset.y = 0f;
+
+            float flatRadius = horizontalOffset.magnitude;
+            capturedHorizontalRadius = Mathf.Max(0.0001f, flatRadius);
+            capturedRelativeHeight = transform.position.y - followTargetPos.y;
+            isCompositionCaptured = true;
+        }
+
+        // 计算期望位置：基于当前水平方向 + 捕获的半径/高度
+        Vector3 currentHorizontal = transform.position - followTargetPos;
+        currentHorizontal.y = 0f;
+
+        float currentHorizontalSqrMag = currentHorizontal.sqrMagnitude;
+        if (currentHorizontalSqrMag < 0.0001f)
+        {
+            currentHorizontal = Vector3.back;
+            currentHorizontalSqrMag = 1f;
+        }
+
+        // 优化：复用归一化结果
+        Vector3 currentHorizontalNormalized = currentHorizontal / Mathf.Sqrt(currentHorizontalSqrMag);
+        Vector3 desiredPosition = followTargetPos
+            + currentHorizontalNormalized * capturedHorizontalRadius
+            + Vector3.up * capturedRelativeHeight;
+
+        // 从期望位置反解 yaw/pitch
+        Vector3 offset = desiredPosition - followTargetPos;
+        float offsetMag = offset.magnitude;
+        if (offsetMag < 0.0001f)
+        {
+            return (0f, 0f);
+        }
+
+        // 优化：直接计算而不是先 normalize 再分别计算
+        float invOffsetMag = 1f / offsetMag;
+        float dirX = offset.x * invOffsetMag;
+        float dirY = offset.y * invOffsetMag;
+        float dirZ = offset.z * invOffsetMag;
+
+        float desiredYaw = Mathf.Atan2(-dirX, -dirZ) * Mathf.Rad2Deg;
+
+        // 优化：复用 dirX 和 dirZ 的平方计算水平长度
+        float horizontalSqrLength = dirX * dirX + dirZ * dirZ;
+        float horizontalLength = Mathf.Sqrt(horizontalSqrLength);
+        float desiredPitch = Mathf.Atan2(dirY, horizontalLength) * Mathf.Rad2Deg;
+        desiredPitch = Mathf.Clamp(desiredPitch, minPitchDeg, maxPitchDeg);
+
+        // 转换为角度增量（最短路径）
+        float yawDelta = Mathf.DeltaAngle(yawDeg, desiredYaw);
+        float pitchDelta = Mathf.DeltaAngle(pitchDeg, desiredPitch);
+
+        // 帧率独立：限制每帧旋转速度
+        float maxDeltaThisFrame = autoFollowSpeed * Time.deltaTime;
+        yawDelta = Mathf.Clamp(yawDelta, -maxDeltaThisFrame, maxDeltaThisFrame);
+        pitchDelta = Mathf.Clamp(pitchDelta, -maxDeltaThisFrame, maxDeltaThisFrame);
+
+        return (yawDelta, pitchDelta);
+    }
+
+    /// <summary>
+    /// 应用旋转：累积角度并限制范围（带平滑插值）
+    /// </summary>
+    private void ApplyRotation(float yawDelta, float pitchDelta)
+    {
+        // 计算目标角度，应用灵敏度
+        float targetYaw = yawDeg + yawDelta * orbitSensitivityYaw;
+        float targetPitch = pitchDeg + pitchDelta * orbitSensitivityPitch;
+
+        // 限制俯仰角范围
+        targetPitch = Mathf.Clamp(targetPitch, minPitchDeg, maxPitchDeg);
+
+        // 平滑插值到目标角度
+        yawDeg = Mathf.SmoothDampAngle(yawDeg, targetYaw, ref yawVelocity, rotationSmoothTime);
+        pitchDeg = Mathf.SmoothDampAngle(pitchDeg, targetPitch, ref pitchVelocity, rotationSmoothTime);
+    }
+
+    /// <summary>
+    /// 更新相机位置：基于轨道角度和距离（带平滑插值和极端角度保护）
+    /// </summary>
+    private void UpdateCameraPosition(bool isAutoMode, Vector3 followTargetPos, Vector3 lookAtTargetPos)
+    {
+        float usedDistance = Mathf.Max(0.0001f, distance);
+
+        // 自动模式特殊处理：动态调整距离以保持水平半径不变
+        if (isAutoMode)
+        {
+            float cosPitch = Mathf.Cos(pitchDeg * Mathf.Deg2Rad);
+            cosPitch = Mathf.Abs(cosPitch);
+            
+            // 极端角度保护：当 pitch 接近 ±90° 时，限制最大距离
+            if (cosPitch < 0.1f)
+            {
+                // pitch 接近垂直，使用固定最大距离避免无限放大
+                usedDistance = Mathf.Min(distance * 3f, capturedHorizontalRadius / 0.1f);
+            }
+            else
+            {
+                usedDistance = capturedHorizontalRadius / cosPitch;
+                // 进一步限制防止异常值
+                usedDistance = Mathf.Clamp(usedDistance, distance * 0.5f, distance * 3f);
+            }
+        }
+
+        // 计算目标位置
+        Vector3 offset = Quaternion.Euler(pitchDeg, yawDeg, 0f) * Vector3.back * usedDistance;
+        Vector3 targetPosition = followTargetPos + offset;
+
+        // 平滑插值到目标位置
+        transform.position = Vector3.SmoothDamp(
+            transform.position, 
+            targetPosition, 
+            ref positionVelocity, 
+            positionSmoothTime
+        );
+
+        // 注视目标（使用分离的 lookAt 目标）
+        transform.LookAt(lookAtTargetPos);
+    }
+
+    /// <summary>
+    /// 清空本帧的输入队列
+    /// </summary>
+    private void ClearInputQueue()
+    {
+        hasQueuedInput = false;
+        queuedYawDelta = 0f;
+        queuedPitchDelta = 0f;
+    }
+    #endregion
+
+    #region 初始化
+    /// <summary>
+    /// 初始化轨道角度：基于当前相机与目标的相对向量
+    /// 避免首次启用时发生画面跳变
+    /// </summary>
+    private void EnsureOrbitInitialized(Vector3 followTargetPos)
+    {
+        if (isOrbitInitialized)
         {
             return;
         }
 
-        Vector3 targetPos = target.transform.position;
-        Vector3 offset = transform.position - targetPos;
+        Vector3 offset = transform.position - followTargetPos;
+
         if (offset.sqrMagnitude < 0.0001f)
         {
             // 若几乎重合，给出一个稳定偏移
@@ -192,21 +345,23 @@ public class CameraFollow : MonoBehaviour
         }
 
         // 由偏移反解 yaw/pitch（度）
-        Vector3 dir = offset.normalized;
-        // yaw: 绕 Y 轴角度（x,z 平面）。注意轨道使用 Vector3.back，需用反向向量求解
-        yawDeg = Mathf.Atan2(-dir.x, -dir.z) * Mathf.Rad2Deg;
-        // pitch: 俯仰角（上为正）
-        float horizontalLen = Mathf.Sqrt(dir.x * dir.x + dir.z * dir.z);
-        pitchDeg = Mathf.Atan2(dir.y, horizontalLen) * Mathf.Rad2Deg;
+        // 优化：直接计算避免临时对象
+        float offsetMag = offset.magnitude;
+        float invOffsetMag = 1f / offsetMag;
+        float dirX = offset.x * invOffsetMag;
+        float dirY = offset.y * invOffsetMag;
+        float dirZ = offset.z * invOffsetMag;
+
+        // Yaw: 绕 Y 轴角度（水平方向）
+        yawDeg = Mathf.Atan2(-dirX, -dirZ) * Mathf.Rad2Deg;
+
+        // Pitch: 俯仰角（垂直方向）
+        float horizontalSqrLength = dirX * dirX + dirZ * dirZ;
+        float horizontalLength = Mathf.Sqrt(horizontalSqrLength);
+        pitchDeg = Mathf.Atan2(dirY, horizontalLength) * Mathf.Rad2Deg;
         pitchDeg = Mathf.Clamp(pitchDeg, minPitchDeg, maxPitchDeg);
 
-        orbitInitialized = true;
+        isOrbitInitialized = true;
     }
-
-    // 角度差（度）：返回从 from 到 to 的最小有向差值（范围约 [-180, 180]）
-    private static float ShortestDeltaAngle(float fromDeg, float toDeg)
-    {
-        float delta = Mathf.DeltaAngle(fromDeg, toDeg);
-        return delta;
-    }
+    #endregion
 }

@@ -36,6 +36,7 @@ public class GamePlayInput
     /// <param name="direction">旋转方向</param>
     public void SetCameraRotateDelta(Vector2 delta)
     {
+        Debug.Log("SetCameraRotateDelta: " + delta);
         CameraRotateInput = delta;
     }
 

@@ -839,6 +839,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _characterController: {fileID: 376988955}
   _mainCamera: {fileID: 727776338}
+  _cameraFollow: {fileID: 727776341}
 --- !u!114 &376988957
 MonoBehaviour:
   m_ObjectHideFlags: 0

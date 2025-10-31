@@ -21,7 +21,7 @@ MonoBehaviour:
   AirDrag: 4
   Gravity: {x: 0, y: -60, z: 0}
   JumpDuration: 0.5
-  JumpSpeed: 14
+  JumpForce: 10
   JumpSpeedCurve:
     serializedVersion: 2
     m_Curve:

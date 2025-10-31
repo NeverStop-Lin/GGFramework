@@ -11,10 +11,17 @@ namespace GameApp.UI
     public class GameHUD : UIBehaviour
     {
 
-        [Inject] GamePlayInput GamePlayInput;
-
+        [Inject] protected GamePlayInput GamePlayInput;
         public TouchDragInput TouchDragInput;
         public VirtualJoystick VirtualJoystick;
+
+
+        protected override void OnCreate(params object[] args)
+        {
+            TouchDragInput.OnDragDeltaChanged.Add(val => GamePlayInput.SetCameraRotateDelta(new Vector2(val.x, val.y)), this, false);
+            TouchDragInput.OnIsDraggingChanged.Add(val => GamePlayInput.SetIsTouchCameraRotateArea(val), this, false);
+            VirtualJoystick.OnInputChanged.Add(val => GamePlayInput.SetMoveDirection(new Vector2(val.x, val.y)), this, false);
+        }
 
         protected override void OnShow(params object[] args)
         {
@@ -26,18 +33,11 @@ namespace GameApp.UI
             return null;
         }
 
-        private void Update()
+        protected override void OnRemove(params object[] args)
         {
-            if (VirtualJoystick != null && VirtualJoystick.IsControlling)
-            {
-                GamePlayInput.SetMoveDirection(VirtualJoystick.Input);
-            }
-            if (TouchDragInput != null)
-            {
-                if (TouchDragInput.IsDragging)
-                    GamePlayInput.SetCameraRotateDelta(TouchDragInput.DragDelta);
-                GamePlayInput.SetIsTouchCameraRotateArea(TouchDragInput.IsDragging);
-            }
+            TouchDragInput.OnDragDeltaChanged.RemoveTarget(this);
+            TouchDragInput.OnIsDraggingChanged.RemoveTarget(this);
+            VirtualJoystick.OnInputChanged.RemoveTarget(this);
         }
     }
 }

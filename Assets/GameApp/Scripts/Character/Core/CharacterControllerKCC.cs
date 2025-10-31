@@ -251,7 +251,7 @@ namespace GameApp.Character
             if (isGrounded)
             {
                 _jumpState.CoyoteTimeRemaining = Config.CoyoteTime;
-                _jumpState.ConsumedCount = 0;
+                // 跳跃次数的重置移到 UpdateCharacterState 中，只在真正着地时重置
             }
             else
             {
@@ -263,6 +263,8 @@ namespace GameApp.Character
         {
             if (isGrounded && (_currentState == CharacterState.Airborne || _currentState == CharacterState.Jumping))
             {
+                // 从空中/跳跃状态着地，重置跳跃次数
+                _jumpState.ConsumedCount = 0;
                 TransitionToState(CharacterState.Default);
             }
             else if (!isGrounded && _currentState == CharacterState.Default && !_jumpState.IsActive)
