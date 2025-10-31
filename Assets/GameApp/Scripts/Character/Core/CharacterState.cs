@@ -5,12 +5,9 @@ namespace GameApp.Character
     /// </summary>
     public enum CharacterState
     {
-        Default,
-        Airborne,
-        Dash,
-        Crouch,
-        Ladder,
-        WallClimb,
+        Default,   // 地面状态
+        Airborne,  // 空中状态
+        Jumping,   // 跳跃中状态
     }
 }
 

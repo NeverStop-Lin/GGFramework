@@ -42,15 +42,18 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
     /// 公开的摇杆输入值，范围为(-1, -1)到(1, 1)
     /// </summary>
     public Vector2 Input { get; private set; }
+    
     /// <summary>
-    /// 是否拖拽
+    /// 是否正在控制中（包括手指按下但未操作、键盘输入等）
+    /// 此状态会在输入归0后延迟一帧才变为false
     /// </summary>
-    public bool IsDragging => _isDragging;
+    public bool IsControlling { get; private set; }
 
     private Vector2 _startHandlePos;
     private Vector2 _startBackgroundPos;
     private bool _isDragging = false; // 标记是否正在进行触摸/鼠标拖拽
-    
+    private bool _hadInputLastFrame = false; // 上一帧是否有输入
+
     private Vector2 _logicalCenter; // 逻辑中心（用于输入计算，localPosition坐标系）
     private Vector2 _targetBackgroundPos; // 背景目标位置（用于缓动，localPosition坐标系）
     private bool _isBackgroundMoving = false; // 背景是否正在缓动
@@ -100,13 +103,15 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
             Vector2 currentPos = joystickBackground.localPosition;
             // 使用 SmoothDamp 实现先快后慢的平滑缓动效果
             joystickBackground.localPosition = Vector2.SmoothDamp(
-                currentPos, 
-                _targetBackgroundPos, 
+                currentPos,
+                _targetBackgroundPos,
+
                 ref _backgroundVelocity,
                 backgroundSmoothTime
             );
-            
+
             // 到达目标位置后停止缓动
+
             if (Vector2.Distance(joystickBackground.localPosition, _targetBackgroundPos) < 0.5f)
             {
                 joystickBackground.localPosition = _targetBackgroundPos;
@@ -114,6 +119,27 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
                 _isBackgroundMoving = false;
             }
         }
+
+        // 更新控制状态（延迟一帧变化）
+        bool hasInputThisFrame = _isDragging || Input.magnitude > 0;
+        
+        if (hasInputThisFrame)
+        {
+            // 当前帧有输入，立即设置为控制中
+            IsControlling = true;
+        }
+        else if (_hadInputLastFrame)
+        {
+            // 当前帧无输入但上一帧有，保持控制状态（延迟一帧）
+            IsControlling = true;
+        }
+        else
+        {
+            // 当前帧和上一帧都无输入，结束控制状态
+            IsControlling = false;
+        }
+        
+        _hadInputLastFrame = hasInputThisFrame;
     }
 
     public void OnPointerDown(PointerEventData eventData)
@@ -128,8 +154,9 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
                 eventData.position,
                 eventData.pressEventCamera,
                 out localPoint);
-            
+
             // 立即记录逻辑中心，用于后续输入计算
+
             _logicalCenter = localPoint;
             // 设置背景目标位置并启动缓动
             _targetBackgroundPos = localPoint;
@@ -145,7 +172,8 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
         if (!_isDragging) return;
 
         Vector2 pos;
-        
+
+
         if (joystickMode == JoystickMode.Follow)
         {
             // Follow 模式：基于逻辑中心计算，不受UI缓动影响
@@ -158,7 +186,8 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
             {
                 // 计算触摸点相对于逻辑中心的偏移
                 pos = touchLocalPos - _logicalCenter;
-                
+
+
                 float inputX = pos.x / (joystickBackground.sizeDelta.x / 2);
                 float inputY = pos.y / (joystickBackground.sizeDelta.y / 2);
                 Input = new Vector2(inputX, inputY);
@@ -198,11 +227,10 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
 
     public void OnPointerUp(PointerEventData eventData)
     {
-        _isDragging = false; // 结束拖拽
-
         Input = Vector2.zero;
+        _isDragging = false; // 结束拖拽
         joystickHandle.anchoredPosition = _startHandlePos;
-        
+
         // Follow 模式下，背景也要归位（使用缓动）
         if (joystickMode == JoystickMode.Follow)
         {

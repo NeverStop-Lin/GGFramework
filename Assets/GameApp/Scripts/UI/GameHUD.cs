@@ -28,7 +28,7 @@ namespace GameApp.UI
 
         private void Update()
         {
-            if (VirtualJoystick != null && VirtualJoystick.IsDragging)
+            if (VirtualJoystick != null && VirtualJoystick.IsControlling)
             {
                 GamePlayInput.SetMoveDirection(VirtualJoystick.Input);
             }
