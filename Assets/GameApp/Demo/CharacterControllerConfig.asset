@@ -18,7 +18,7 @@ MonoBehaviour:
   OrientationSharpness: 10
   MaxAirMoveSpeed: 10
   AirAcceleration: 50
-  AirDrag: 4
+  AirDrag: 20
   Gravity: {x: 0, y: -60, z: 0}
   JumpDuration: 0.5
   JumpForce: 10
