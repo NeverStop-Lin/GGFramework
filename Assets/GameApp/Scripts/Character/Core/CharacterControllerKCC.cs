@@ -313,7 +313,7 @@ namespace GameApp.Character
                 {
                     AnimationCurve curve = Config.JumpSpeedCurve ?? GetDefaultJumpCurve();
                     float speedMultiplier = curve.Evaluate(progress);
-                    float targetVerticalSpeed = Config.JumpSpeed * speedMultiplier;
+                    float targetVerticalSpeed = Config.JumpForce * speedMultiplier;
 
                     // 只在上升期间（曲线值 > 0）赋值垂直速度
                     if (speedMultiplier > 0f)
@@ -450,14 +450,17 @@ namespace GameApp.Character
 
         private AnimationCurve GetDefaultJumpCurve()
         {
-            // 创建默认平台跳曲线：(0, 1.0) → (0.8, 0.8) → (1.0, 0)
+            // 创建 ease-out 跳跃曲线：前期保持高速，后期快速衰减
             AnimationCurve curve = new AnimationCurve();
-            curve.AddKey(new Keyframe(0f, 1.0f));
-            curve.AddKey(new Keyframe(0.8f, 0.8f));
-            curve.AddKey(new Keyframe(1.0f, 0f));
+            
+            // 添加关键帧，实现 ease-out 效果
+            curve.AddKey(new Keyframe(0f, 1.0f, 0f, 0f));      // 起点：速度最大，切线水平
+            curve.AddKey(new Keyframe(0.7f, 0.85f));           // 前70%缓慢下降
+            curve.AddKey(new Keyframe(0.85f, 0.5f));           // 开始加速下降
+            curve.AddKey(new Keyframe(1.0f, 0f, -2f, 0f));     // 终点：快速降到0
 
-            // 设置为平滑插值
-            for (int i = 0; i < curve.keys.Length; i++)
+            // 设置平滑插值
+            for (int i = 1; i < curve.keys.Length - 1; i++)
             {
                 curve.SmoothTangents(i, 0f);
             }
