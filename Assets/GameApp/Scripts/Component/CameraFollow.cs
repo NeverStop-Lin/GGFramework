@@ -107,12 +107,34 @@ public class CameraFollow : MonoBehaviour
 
         _transposer.m_FollowOffset = offset;
     }
-
+    [Header("锁敌模式配置")]
+    [Tooltip("只有当敌人与玩家的距离大于此值时，才会触发锁敌模式。")]
+    public float minEnemyLockDistance = 3f;
     // 判断状态和更新
     void UpdateFollowMode()
     {
-        FollowMode newMode;
+
+
+        bool shouldLockEnemy = false;
         if (enemyTarget != null)
+        {
+            // 计算玩家和敌人之间的水平距离
+            Vector3 playerPos = cinemachineVirtualCamera.Follow.transform.position;
+            Vector3 enemyPos = enemyTarget.transform.position;
+
+            // 我们通常关心水平距离，避免上下跳跃影响锁定
+            float distanceToEnemy = Vector3.Distance(new Vector3(playerPos.x, 0, playerPos.z), new Vector3(enemyPos.x, 0, enemyPos.z));
+
+            // 只有当距离大于我们设定的最小值时，才满足锁敌条件
+            if (distanceToEnemy > minEnemyLockDistance)
+            {
+                shouldLockEnemy = true;
+            }
+        }
+
+
+        FollowMode newMode;
+        if (enemyTarget != null && shouldLockEnemy)
         {
             newMode = FollowMode.Enemy;
         }
@@ -282,7 +304,51 @@ public class CameraFollow : MonoBehaviour
     }
     void HandheldEnemyFollow()
     {
+        if (enemyTarget == null || cinemachineVirtualCamera.Follow == null)
+        {
+            HandheldAutoFollow();
+            return;
+        }
 
+        // --- 1. 获取位置和方向 ---
+        Vector3 playerPosition = cinemachineVirtualCamera.Follow.transform.position;
+        Vector3 enemyPosition = enemyTarget.transform.position;
+
+        // 计算从玩家指向敌人的水平方向
+        Vector3 directionToEnemy = enemyPosition - playerPosition;
+        directionToEnemy.y = 0;
+
+        // 安全校验
+        if (directionToEnemy.sqrMagnitude < 0.001f)
+        {
+            // 如果敌人和玩家在同一点，使用 Auto 模式的默认后方
+            HandheldAutoFollow();
+            return;
+        }
+        directionToEnemy.Normalize();
+
+        // --- 2. 核心计算：确定相机位置 ---
+
+        // 相机必须位于玩家和敌人连线的反方向 (即玩家的后方) 
+        // 这样相机看向玩家时，玩家的前方就是敌人的方向。
+        // 相机水平偏移方向 = -(玩家到敌人方向)
+        Vector3 cameraHorizontalDirection = -directionToEnemy;
+
+        // 3. 构建最终的理想偏移量
+        // 保持与 Auto 模式一样的固定水平半径和固定高度
+        Vector3 horizontalOffset = cameraHorizontalDirection * _autoFollowHorizontalRadius;
+        Vector3 idealOffset = new Vector3(horizontalOffset.x, fixedHeight, horizontalOffset.z);
+
+        // --- 4. 更新漂移状态并平滑移动 ---
+        // 使用与 Auto 模式一样的逻辑来维持平滑感
+        Vector3 currentWorldPosition = cinemachineVirtualCamera.Follow.transform.position + _transposer.m_FollowOffset;
+
+        // 修正漂移逻辑，确保平滑过渡（我们用当前真实位置到新的理想位置）
+        // 尽管我们没有使用 _autoFollowPosition 来计算理想偏移，但我们需要用它来平滑过渡。
+        // 在这个模式下，我们不需要漂移（相机位置是锁定的），所以 _autoFollowPosition 只需要更新
+        _autoFollowPosition = playerPosition + idealOffset;
+
+        SmoothlyUpdateFollowOffset(idealOffset);
     }
 
     /// <summary>
