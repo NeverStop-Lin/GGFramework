@@ -1,51 +1,30 @@
-
+using Framework.Core;
 using UnityEngine;
-
+using Zenject;
 
 /// <summary>
 /// 游戏输入系统
 /// </summary>
-public class GamePlayInput
+public class GamePlayInput : IInitializable
 {
-    /// <summary>
-    /// 移动玩家方向
-    /// </summary>
-    public Vector3 PlayerMoveInput { get; private set; }
-    /// <summary>
-    /// 旋转相机增量值
-    /// </summary>
-    public Vector2 CameraRotateInput { get; private set; }
-    /// <summary>
-    /// 是否触摸旋转相机区域
-    /// </summary>
-    public bool IsTouchCameraRotateArea { get; private set; }
+    [Inject] private IObservers _observers;
 
+    /// <summary>  移动玩家方向 Observer  </summary>
+    public IValueObserver<Vector2> PlayerMoveInputObserver { get; private set; }
 
-    /// <summary>
-    /// 设置移动玩家方向
-    /// </summary>
-    /// <param name="direction">移动方向</param>
-    public void SetMoveDirection(Vector2 direction)
+    /// <summary> 旋转相机增量值 Observer </summary>
+    public IValueObserver<Vector2> CameraRotateInputObserver { get; private set; }
+
+    /// <summary> 是否触摸旋转相机区域 Observer </summary>
+    public IValueObserver<bool> IsTouchCameraRotateAreaObserver { get; private set; }
+
+    public static int Value = 1;
+
+    [Inject]
+    public void Initialize()
     {
-        PlayerMoveInput = new Vector3(direction.x, 0, direction.y);
-    }
-
-    /// <summary>
-    /// 设置旋转相机增量值
-    /// </summary>
-    /// <param name="direction">旋转方向</param>
-    public void SetCameraRotateDelta(Vector2 delta)
-    {
-        Debug.Log("SetCameraRotateDelta: " + delta);
-        CameraRotateInput = delta;
-    }
-
-    /// <summary>
-    /// 设置是否触摸旋转相机区域
-    /// </summary>
-    /// <param name="isTouch">是否触摸</param>
-    public void SetIsTouchCameraRotateArea(bool isTouch)
-    {
-        IsTouchCameraRotateArea = isTouch;
+        PlayerMoveInputObserver = _observers.Value(Vector2.zero);
+        CameraRotateInputObserver = _observers.Value(Vector2.zero);
+        IsTouchCameraRotateAreaObserver = _observers.Value(false);
     }
 }

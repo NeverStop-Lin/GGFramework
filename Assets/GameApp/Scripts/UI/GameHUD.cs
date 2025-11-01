@@ -18,9 +18,12 @@ namespace GameApp.UI
 
         protected override void OnCreate(params object[] args)
         {
-            TouchDragInput.OnDragDeltaChanged.Add(val => GamePlayInput.SetCameraRotateDelta(new Vector2(val.x, val.y)), this, false);
-            TouchDragInput.OnIsDraggingChanged.Add(val => GamePlayInput.SetIsTouchCameraRotateArea(val), this, false);
-            VirtualJoystick.OnInputChanged.Add(val => GamePlayInput.SetMoveDirection(new Vector2(val.x, val.y)), this, false);
+            TouchDragInput.OnDragDeltaChanged.Add(val =>
+            {
+                GamePlayInput.CameraRotateInputObserver.Value = val;
+            }, this, false);
+            TouchDragInput.OnIsDraggingChanged.Add(val => { GamePlayInput.IsTouchCameraRotateAreaObserver.Value = val; }, this, false);
+            VirtualJoystick.OnInputChanged.Add(val => { GamePlayInput.PlayerMoveInputObserver.Value = val; }, this, false);
         }
 
         protected override void OnShow(params object[] args)

@@ -66,7 +66,6 @@ namespace GameApp.Character
         private JumpState _jumpState;
         private Vector3 _moveInputVector = Vector3.zero;
         private Vector3 _desiredForward = Vector3.forward;
-        private Camera _mainCamera;
         #endregion
 
         #region Unity Lifecycle
@@ -94,14 +93,6 @@ namespace GameApp.Character
 
         #region Public Interface
         /// <summary>
-        /// 设置相机引用（用于获取相机旋转）
-        /// </summary>
-        public void SetCamera(Camera camera)
-        {
-            _mainCamera = camera;
-        }
-
-        /// <summary>
         /// 设置输入
         /// </summary>
         public void SetInput(ref CharacterInputData input)
@@ -110,9 +101,11 @@ namespace GameApp.Character
             if (input.UseCameraRotation)
             {
                 // 模式1：原始输入 + 相机旋转转换
-                Quaternion cameraRotation = input.CameraRotation != Quaternion.identity
-                    ? input.CameraRotation
-                    : (_mainCamera != null ? _mainCamera.transform.rotation : Quaternion.identity);
+                if (input.CameraRotation == Quaternion.identity)
+                {
+                    throw new InvalidOperationException("CameraRotation is required when UseCameraRotation is true");
+                }
+                Quaternion cameraRotation = input.CameraRotation;
 
                 Vector3 cameraPlanarDirection =
                     Vector3.ProjectOnPlane(cameraRotation * Vector3.forward, Motor.CharacterUp).normalized;
