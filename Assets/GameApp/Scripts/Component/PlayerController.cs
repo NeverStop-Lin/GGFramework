@@ -1,3 +1,5 @@
+using Cinemachine;
+using Framework.Core;
 using GameApp.Character;
 using UnityEngine;
 using Zenject;
@@ -9,9 +11,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private CharacterControllerKCC _characterController = null;
     [SerializeField] private CameraFollow _cameraFollow = null;
     private CharacterInputData _characterInputData = new();
+    private CinemachineBrain brain = null;
     // Start is called before the first frame update
     void Start()
     {
+        brain = FindObjectOfType<CinemachineBrain>();
         _gamePlayInput.CameraRotateInputObserver.OnChange.Add(OnCameraRotateInput, this, false);
         _gamePlayInput.PlayerMoveInputObserver.OnChange.Add(OnPlayerMoveInput, this, false);
         _characterInputData.UseCameraRotation = true;
@@ -20,7 +24,8 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        _characterInputData.CameraRotation = _cameraFollow.transform.rotation;
+
+        _characterInputData.CameraRotation = brain.transform.rotation;
         _characterInputData.JumpDown = Input.GetKeyDown(KeyCode.Space);
         _characterController.SetInput(ref _characterInputData);
     }

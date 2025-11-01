@@ -80,6 +80,7 @@ public class CameraFollow : MonoBehaviour
         {
             _transposer = cinemachineVirtualCamera.GetCinemachineComponent<CinemachineTransposer>();
         }
+        InitializeCameraState();
     }
     private void LateUpdate()
     {
@@ -183,58 +184,155 @@ public class CameraFollow : MonoBehaviour
     }
 
     // 在你的类成员变量区域，用这两个新变量替换掉 _autoFollowPosition 和 _autoFollowOffsetProjectionLength
-    private float _autoFollowRadius; // “记忆”的水平半径 (替代 _autoFollowOffsetProjectionLength)
-    private float _autoFollowHeight; // “记忆”的相对高度
-    private Vector3 _autoFollowPosition; // 重新加回来！它将存储上一帧的“理想相机世界坐标”
-    // ... 其他代码 ...
-    private bool _isAutoFollowInitialized = false; // 新增！自动模式初始化标志
+    [Header("自动跟随模式配置")]
+    [Tooltip("自动跟随模式下，相机与目标的固定3D空间距离。")]
+    public float fixedDistance = 10f;
+
+    [Tooltip("自动跟随模式下，相机与目标的固定相对高度。")]
+    public float fixedHeight = 4f;
+
+    private bool _isAutoFollowInitialized = false;
+    private float _autoFollowHorizontalRadius; // 【关键】由上面两个值计算出的固定水平半径
+    private Vector3 _autoFollowPosition;
     void HandheldAutoFollow()
     {
-        // --- Part 1: 初始化/记忆构图 (模式切换或首次运行时) ---
+        // --- Part 1: 初始化/记忆构图 ---
         if (_lastFollowMode != _followMode || !_isAutoFollowInitialized)
         {
-            // --- 核心修正 ---
-            // 无论如何，只要进入自动模式，就将高度设置为固定的期望值。
-            _autoFollowHeight = 4f; // 或者你可以把它做成一个公共变量在Inspector里设置
-
-            if (_lastFollowMode == FollowMode.Manual)
+            // 1. 【核心】根据勾股定理，计算出固定的水平半径
+            //    安全校验，确保总距离大于高度，否则无法构成三角形
+            if (fixedDistance < fixedHeight)
             {
-                // 我们仍然“记忆”水平距离，但不再记忆高度
-                Vector3 lastOffset = _transposer.m_FollowOffset;
-                _autoFollowRadius = new Vector3(lastOffset.x, 0, lastOffset.z).magnitude;
-                _autoFollowRadius = Mathf.Min(_autoFollowRadius, distance);
+                Debug.LogError("相机配置错误：fixedDistance 必须大于 fixedHeight！");
+                // 使用一个安全的回退值
+                _autoFollowHorizontalRadius = fixedDistance;
             }
             else
             {
-                // 游戏启动时，使用预设的距离
-                _autoFollowRadius = distance;
+                _autoFollowHorizontalRadius = Mathf.Sqrt(fixedDistance * fixedDistance - fixedHeight * fixedHeight);
             }
 
-            if (_autoFollowRadius < 0.1f) { _autoFollowRadius = distance; }
-
+            // 2. 初始化漂移位置，防止镜头跳跃
             _autoFollowPosition = transform.position;
+
             _isAutoFollowInitialized = true;
         }
 
-        // --- Part 2: 每帧更新部分 (这部分已是最终形态，无需修改) ---
+        // --- Part 2: 每帧更新/维持构图 ---
         Vector3 targetPosition = cinemachineVirtualCamera.Follow.transform.position;
+
+        // 1. 【核心】在水平面上计算漂移方向
+        //    从当前目标位置，指向上一帧的理想相机位置，但只考虑水平投影
         Vector3 direction = _autoFollowPosition - targetPosition;
-        direction.y = 0;
+        direction.y = 0; // 强制在X-Z平面上进行漂移
+
         if (direction.sqrMagnitude < 0.001f)
         {
+            // 如果方向向量过小，使用一个默认的后方方向
             direction = -cinemachineVirtualCamera.Follow.transform.forward;
+            direction.y = 0; // 确保是水平的
         }
-        Vector3 horizontalOffset = direction.normalized * _autoFollowRadius;
-        Vector3 finalOffset = new Vector3(horizontalOffset.x, _autoFollowHeight, horizontalOffset.z);
-        _autoFollowPosition = targetPosition + finalOffset;
-        SetFollowOffset(finalOffset);
+        direction.Normalize();
+
+        // 2. 计算理想的【水平】偏移量
+        //    使用“漂移后”的水平方向，乘以我们计算出的固定水平半径
+        Vector3 horizontalOffset = direction * _autoFollowHorizontalRadius;
+
+        // 3. 构建最终的3D偏移向量
+        //    结合固定的水平偏移和固定的垂直高度
+        Vector3 idealOffset = new Vector3(horizontalOffset.x, fixedHeight, horizontalOffset.z);
+
+        // 4. 更新状态，为下一帧做准备
+        _autoFollowPosition = targetPosition + idealOffset;
+
+        // 5. 将最终的理想偏移量交给Cinemachine
+        SmoothlyUpdateFollowOffset(idealOffset);
+    }
+
+    // 在您的类成员变量区域，添加这两个新变量
+
+    [Header("自定义平滑配置")]
+    [Tooltip("相机跟随的平滑时间。值越大，相机越'懒'、越平滑。推荐值 0.1 ~ 0.5")]
+    public float customSmoothTime = 0.25f;
+
+    // 这个变量是 SmoothDamp 函数内部需要的，用来存储当前速度，我们不需要手动修改它
+    private Vector3 _cameraOffsetVelocity = Vector3.zero;
+
+    /// <summary>
+    /// 使用 SmoothDamp 平滑地更新相机的 Follow Offset。
+    /// </summary>
+    /// <param name="idealOffset">我们希望相机最终到达的理想偏移位置</param>
+    void SmoothlyUpdateFollowOffset(Vector3 idealOffset)
+    {
+        // 1. 获取相机当前的“真实”偏移量
+        Vector3 currentOffset = _transposer.m_FollowOffset;
+
+        // 2. 使用 SmoothDamp 计算出下一帧的平滑位置
+        //    这个函数会从 currentOffset 向 idealOffset 平滑地移动，
+        //    大约在 customSmoothTime 秒内完成大部分移动。
+        Vector3 smoothedOffset = Vector3.SmoothDamp(
+            currentOffset,          // 当前位置
+            idealOffset,            // 目标位置
+            ref _cameraOffsetVelocity, // 当前速度（函数会自动更新它）
+            customSmoothTime        // 到达目标所需的大致时间
+        );
+
+        // 3. 将我们自己计算出的“平滑后”的偏移量，设置给 Cinemachine
+        SetFollowOffset(smoothedOffset);
     }
     void HandheldEnemyFollow()
     {
 
     }
 
+    /// <summary>
+    /// 在游戏开始时调用，用于计算并立即设置相机的初始位置和状态，防止镜头跳跃。
+    /// </summary>
+    void InitializeCameraState()
+    {
+        // --- 安全校验 ---
+        if (cinemachineVirtualCamera == null || cinemachineVirtualCamera.Follow == null)
+        {
+            Debug.LogError("相机或跟随目标未设置，无法初始化相机位置！");
+            return;
+        }
 
+        // --- 1. 计算固定的水平半径 (与HandheldAutoFollow中的逻辑相同) ---
+        if (fixedDistance < fixedHeight)
+        {
+            Debug.LogError("相机配置错误：fixedDistance 必须大于 fixedHeight！");
+            _autoFollowHorizontalRadius = fixedDistance;
+        }
+        else
+        {
+            _autoFollowHorizontalRadius = Mathf.Sqrt(fixedDistance * fixedDistance - fixedHeight * fixedHeight);
+        }
+
+        // --- 2. 计算初始的理想偏移量 ---
+        // 在游戏开始时，我们给一个默认的、在目标正后方的方向
+        Vector3 initialDirection = -cinemachineVirtualCamera.Follow.transform.forward;
+        initialDirection.y = 0;
+        initialDirection.Normalize();
+
+        Vector3 horizontalOffset = initialDirection * _autoFollowHorizontalRadius;
+        Vector3 initialOffset = new Vector3(horizontalOffset.x, fixedHeight, horizontalOffset.z);
+
+        // --- 3. 立即设置位置和状态 (核心步骤) ---
+        Vector3 targetPosition = cinemachineVirtualCamera.Follow.transform.position;
+        Vector3 initialWorldPosition = targetPosition + initialOffset;
+
+        // a. 立即将相机传送到目标位置，消除视觉跳跃
+        transform.position = initialWorldPosition;
+
+        // b. 立即更新Cinemachine的偏移量，保持内部状态一致
+        SetFollowOffset(initialOffset);
+
+        // c. 初始化漂移逻辑的“上一帧位置”，防止第一帧更新时出错
+        _autoFollowPosition = initialWorldPosition;
+
+        // d. 标记为已初始化
+        _isAutoFollowInitialized = true;
+    }
 
     #region 公共接口
     /// <summary>
