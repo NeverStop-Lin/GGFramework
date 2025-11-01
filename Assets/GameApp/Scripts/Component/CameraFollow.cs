@@ -187,61 +187,46 @@ public class CameraFollow : MonoBehaviour
     private float _autoFollowHeight; // “记忆”的相对高度
     private Vector3 _autoFollowPosition; // 重新加回来！它将存储上一帧的“理想相机世界坐标”
     // ... 其他代码 ...
-    private bool _isAutoModeInitialized = false; // 新增！自动模式初始化标志
+    private bool _isAutoFollowInitialized = false; // 新增！自动模式初始化标志
     void HandheldAutoFollow()
     {
         // --- Part 1: 初始化/记忆构图 (模式切换或首次运行时) ---
-        if (_lastFollowMode != _followMode || !_isAutoModeInitialized)
+        if (_lastFollowMode != _followMode || !_isAutoFollowInitialized)
         {
-            // 1. 设置构图半径和高度 (这部分逻辑已经很完美了)
+            // --- 核心修正 ---
+            // 无论如何，只要进入自动模式，就将高度设置为固定的期望值。
+            _autoFollowHeight = 4f; // 或者你可以把它做成一个公共变量在Inspector里设置
+
             if (_lastFollowMode == FollowMode.Manual)
             {
+                // 我们仍然“记忆”水平距离，但不再记忆高度
                 Vector3 lastOffset = _transposer.m_FollowOffset;
                 _autoFollowRadius = new Vector3(lastOffset.x, 0, lastOffset.z).magnitude;
-                _autoFollowHeight = lastOffset.y;
-                _autoFollowRadius = Mathf.Min(_autoFollowRadius, distance); // 施加最大距离限制
+                _autoFollowRadius = Mathf.Min(_autoFollowRadius, distance);
             }
             else
             {
+                // 游戏启动时，使用预设的距离
                 _autoFollowRadius = distance;
-                _autoFollowHeight = 4f;
             }
 
             if (_autoFollowRadius < 0.1f) { _autoFollowRadius = distance; }
 
-            // 2. 【核心修正】初始化“理想相机位置”
-            //    将它的初始值设置为相机当前的【实际世界位置】。
-            //    这能确保从任何模式切换过来时，都绝对不会有任何跳跃。
             _autoFollowPosition = transform.position;
-
-            _isAutoModeInitialized = true;
+            _isAutoFollowInitialized = true;
         }
 
-        // --- Part 2: 每帧更新/维持构图 (你最初的“漂移”逻辑的正确实现) ---
+        // --- Part 2: 每帧更新部分 (这部分已是最终形态，无需修改) ---
         Vector3 targetPosition = cinemachineVirtualCamera.Follow.transform.position;
-
-        // 1. 计算方向：从【当前】目标位置，指向【上一帧】的理想相机位置。
-        //    这就是你伪代码的精髓！
         Vector3 direction = _autoFollowPosition - targetPosition;
-        direction.y = 0; // 只在水平面计算方向
-
-        // 安全校验
+        direction.y = 0;
         if (direction.sqrMagnitude < 0.001f)
         {
             direction = -cinemachineVirtualCamera.Follow.transform.forward;
         }
-
-        // 2. 根据这个“滞后”的方向，计算出理想的偏移量
         Vector3 horizontalOffset = direction.normalized * _autoFollowRadius;
         Vector3 finalOffset = new Vector3(horizontalOffset.x, _autoFollowHeight, horizontalOffset.z);
-
-        // 3. 【关键步骤】更新状态，为下一帧做准备
-        //    计算出本帧的“理想相机世界坐标”，并存储在 _autoFollowPosition 中。
-        //    这样下一帧就能用它来计算新的“滞后方向”了。
         _autoFollowPosition = targetPosition + finalOffset;
-
-        // 4. 将本帧计算出的理想偏移量交给 Cinemachine
-        //    Cinemachine 的 Damping 会负责将相机从【当前实际位置】平滑移动到【理想偏移位置】
         SetFollowOffset(finalOffset);
     }
     void HandheldEnemyFollow()
