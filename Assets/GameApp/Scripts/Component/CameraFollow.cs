@@ -11,50 +11,66 @@ using Framework.Core;
 public class CameraFollow : MonoBehaviour
 {
     #region 配置参数
-    
-    [Header("核心组件 =========================")]
-    [Label("相机", "相机组件（必需）")]
+
+    [Header("相机组件（必需）")]
     public CinemachineVirtualCamera cinemachineVirtualCamera;
+    [Header("手动模式参数")]
+    public ManualModeSettings manualModeSettings = new ManualModeSettings();
+    [Header("自动模式参数")]
+    public AutoModeSettings autoModeSettings = new AutoModeSettings();
+    [Header("锁敌模式参数")]
+    public EnemyModeSettings enemyModeSettings = new EnemyModeSettings();
 
-    [Header("手动模式参数 =========================")]
-    [Label("俯仰角下限", "最小俯仰角（度）")]
-    public float minPitchDeg = 30;
+    #endregion
 
-    [Label("俯仰角上限", "最大俯仰角（度）")]
-    public float maxPitchDeg = 150;
+    #region 配置结构体
+    [System.Serializable]
+    public class ManualModeSettings
+    {
+        [Label("俯仰角下限", "最小俯仰角（度） 推荐值 80")]
+        public float minPitchDeg = 80;
 
-    [Label("水平灵敏度", "水平旋转灵敏度")]
-    public float orbitSensitivityYaw = 1f;
+        [Label("俯仰角上限", "最大俯仰角（度） 推荐值 150")]
+        public float maxPitchDeg = 150;
 
-    [Label("垂直灵敏度", "垂直旋转灵敏度")]
-    public float orbitSensitivityPitch = 1f;
+        [Label("水平灵敏度", "水平旋转灵敏度 推荐值 0.1")]
+        public float orbitSensitivityYaw = 0.1f;
 
-    [Label("水平平滑时间", "水平旋转平滑时间")]
-    public float orbitSmoothTimeYaw = 0.1f;
+        [Label("垂直灵敏度", "垂直旋转灵敏度 推荐值 0.1")]
+        public float orbitSensitivityPitch = 0.1f;
 
-    [Label("垂直平滑时间", "垂直旋转平滑时间")]
-    public float orbitSmoothTimePitch = 0.1f;
+        [Label("水平平滑时间", "水平旋转平滑时间 推荐值 0.1")]
+        public float orbitSmoothTimeYaw = 0.1f;
 
-    [Header("自动模式参数 =========================")]
-    [Label("相机与目标的固定3D空间距离")]
-    public float fixedDistance = 10f;
+        [Label("垂直平滑时间", "垂直旋转平滑时间 推荐值 0.1")]
+        public float orbitSmoothTimePitch = 0.1f;
+    }
 
-    [Label("相机与目标的固定相对高度")]
-    public float fixedHeight = 4f;
+    [System.Serializable]
+    public class AutoModeSettings
+    {
+        [Label("相机与目标的固定3D空间距离 推荐值 10")]
+        public float fixedDistance = 10f;
 
-    [Label("相机跟随的平滑时间（推荐值 0.1 ~ 0.5）")]
-    public float autoFollowSmoothTime = 0.25f;
+        [Label("相机与目标的固定相对高度 推荐值 4")]
+        public float fixedHeight = 4f;
 
-    [Header("锁敌模式参数 =========================")]
-    [Label("敌人目标（可选）")]
-    public GameObject enemyTarget;
+        [Label("相机跟随的平滑时间（推荐值 0.1 ~ 0.2）")]
+        public float autoFollowSmoothTime = 0.2f;
+    }
 
-    [Label("触发锁敌的最小距离")]
-    public float minEnemyLockDistance = 3f;
+    [System.Serializable]
+    public class EnemyModeSettings
+    {
+        [Label("敌人目标（可选）")]
+        public GameObject enemyTarget;
 
-    [Label("相机跟随的平滑时间（推荐值 0.1 ~ 0.5）")]
-    public float enemyFollowSmoothTime = 0.25f;
-    
+        [Label("触发锁敌的最小距离 推荐值 3")]
+        public float minEnemyLockDistance = 3f;
+
+        [Label("相机跟随的平滑时间（推荐值 0.5）")]
+        public float enemyFollowSmoothTime = 0.5f;
+    }
     #endregion
 
     #region Cinemachine 组件
@@ -69,7 +85,7 @@ public class CameraFollow : MonoBehaviour
         Manual,
         Enemy
     }
-    [ReadOnly][SerializeField] private FollowMode _followMode = FollowMode.None;
+    [Header("调试信息")][ReadOnly][SerializeField][Label("当前跟随模式", "", true)] private FollowMode _followMode = FollowMode.None;
     private FollowMode _lastFollowMode = FollowMode.None;
     #endregion
 
@@ -127,20 +143,20 @@ public class CameraFollow : MonoBehaviour
     void UpdateFollowMode()
     {
         bool shouldLockEnemy = false;
-        if (enemyTarget != null)
+        if (enemyModeSettings.enemyTarget != null)
         {
             Vector3 playerPos = cinemachineVirtualCamera.Follow.transform.position;
-            Vector3 enemyPos = enemyTarget.transform.position;
+            Vector3 enemyPos = enemyModeSettings.enemyTarget.transform.position;
             float distanceToEnemy = Vector3.Distance(new Vector3(playerPos.x, 0, playerPos.z), new Vector3(enemyPos.x, 0, enemyPos.z));
 
-            if (distanceToEnemy > minEnemyLockDistance)
+            if (distanceToEnemy > enemyModeSettings.minEnemyLockDistance)
             {
                 shouldLockEnemy = true;
             }
         }
 
         FollowMode newMode;
-        if (enemyTarget != null && shouldLockEnemy)
+        if (enemyModeSettings.enemyTarget != null && shouldLockEnemy)
         {
             newMode = FollowMode.Enemy;
         }
@@ -167,11 +183,11 @@ public class CameraFollow : MonoBehaviour
             _manualPitchDeg = spherical.theta * Mathf.Rad2Deg;
         }
 
-        if (orbitSmoothTimeYaw <= 0f) orbitSmoothTimeYaw = 0.01f;
-        if (orbitSmoothTimePitch <= 0f) orbitSmoothTimePitch = 0.01f;
+        if (manualModeSettings.orbitSmoothTimeYaw <= 0f) manualModeSettings.orbitSmoothTimeYaw = 0.01f;
+        if (manualModeSettings.orbitSmoothTimePitch <= 0f) manualModeSettings.orbitSmoothTimePitch = 0.01f;
 
-        float usedYawDelta = 1 / orbitSmoothTimeYaw * queuedYawDelta * Time.deltaTime;
-        float usedPitchDelta = 1 / orbitSmoothTimePitch * queuedPitchDelta * Time.deltaTime;
+        float usedYawDelta = 1 / manualModeSettings.orbitSmoothTimeYaw * queuedYawDelta * Time.deltaTime;
+        float usedPitchDelta = 1 / manualModeSettings.orbitSmoothTimePitch * queuedPitchDelta * Time.deltaTime;
         queuedYawDelta -= usedYawDelta;
         queuedPitchDelta -= usedPitchDelta;
 
@@ -182,7 +198,7 @@ public class CameraFollow : MonoBehaviour
         _manualPitchDeg += usedPitchDelta;
 
         // 限制俯仰角范围（theta从Y轴向下算，0是正上方，180是正下方）
-        _manualPitchDeg = Mathf.Clamp(_manualPitchDeg, 180 - maxPitchDeg, 180 - minPitchDeg);
+        _manualPitchDeg = Mathf.Clamp(_manualPitchDeg, 180 - manualModeSettings.maxPitchDeg, 180 - manualModeSettings.minPitchDeg);
 
         Spherical sphericalOffset = new Spherical(
             _manualRadius,
@@ -200,14 +216,14 @@ public class CameraFollow : MonoBehaviour
         if (_lastFollowMode != _followMode || !_isAutoFollowInitialized)
         {
             // 根据勾股定理计算固定水平半径
-            if (fixedDistance < fixedHeight)
+            if (autoModeSettings.fixedDistance < autoModeSettings.fixedHeight)
             {
                 Debug.LogError("相机配置错误：fixedDistance 必须大于 fixedHeight！");
-                _autoFollowHorizontalRadius = fixedDistance;
+                _autoFollowHorizontalRadius = autoModeSettings.fixedDistance;
             }
             else
             {
-                _autoFollowHorizontalRadius = Mathf.Sqrt(fixedDistance * fixedDistance - fixedHeight * fixedHeight);
+                _autoFollowHorizontalRadius = Mathf.Sqrt(autoModeSettings.fixedDistance * autoModeSettings.fixedDistance - autoModeSettings.fixedHeight * autoModeSettings.fixedHeight);
             }
 
             _autoFollowPosition = transform.position;
@@ -228,10 +244,10 @@ public class CameraFollow : MonoBehaviour
         direction.Normalize();
 
         Vector3 horizontalOffset = direction * _autoFollowHorizontalRadius;
-        Vector3 idealOffset = new Vector3(horizontalOffset.x, fixedHeight, horizontalOffset.z);
+        Vector3 idealOffset = new Vector3(horizontalOffset.x, autoModeSettings.fixedHeight, horizontalOffset.z);
 
         _autoFollowPosition = targetPosition + idealOffset;
-        SmoothlyUpdateFollowOffset(idealOffset, autoFollowSmoothTime);
+        SmoothlyUpdateFollowOffset(idealOffset, autoModeSettings.autoFollowSmoothTime);
     }
 
     void SmoothlyUpdateFollowOffset(Vector3 idealOffset, float smoothTime)
@@ -247,14 +263,14 @@ public class CameraFollow : MonoBehaviour
     }
     void HandheldEnemyFollow()
     {
-        if (enemyTarget == null || cinemachineVirtualCamera.Follow == null)
+        if (enemyModeSettings.enemyTarget == null || cinemachineVirtualCamera.Follow == null)
         {
             HandheldAutoFollow();
             return;
         }
 
         Vector3 playerPosition = cinemachineVirtualCamera.Follow.transform.position;
-        Vector3 enemyPosition = enemyTarget.transform.position;
+        Vector3 enemyPosition = enemyModeSettings.enemyTarget.transform.position;
 
         Vector3 directionToEnemy = enemyPosition - playerPosition;
         directionToEnemy.y = 0;
@@ -269,10 +285,10 @@ public class CameraFollow : MonoBehaviour
         // 相机位于玩家后方，朝向敌人
         Vector3 cameraHorizontalDirection = -directionToEnemy;
         Vector3 horizontalOffset = cameraHorizontalDirection * _autoFollowHorizontalRadius;
-        Vector3 idealOffset = new Vector3(horizontalOffset.x, fixedHeight, horizontalOffset.z);
+        Vector3 idealOffset = new Vector3(horizontalOffset.x, autoModeSettings.fixedHeight, horizontalOffset.z);
 
         _autoFollowPosition = playerPosition + idealOffset;
-        SmoothlyUpdateFollowOffset(idealOffset, enemyFollowSmoothTime);
+        SmoothlyUpdateFollowOffset(idealOffset, enemyModeSettings.enemyFollowSmoothTime);
     }
 
     void InitializeCameraState()
@@ -284,14 +300,14 @@ public class CameraFollow : MonoBehaviour
         }
 
         // 计算固定水平半径
-        if (fixedDistance < fixedHeight)
+        if (autoModeSettings.fixedDistance < autoModeSettings.fixedHeight)
         {
             Debug.LogError("相机配置错误：fixedDistance 必须大于 fixedHeight！");
-            _autoFollowHorizontalRadius = fixedDistance;
+            _autoFollowHorizontalRadius = autoModeSettings.fixedDistance;
         }
         else
         {
-            _autoFollowHorizontalRadius = Mathf.Sqrt(fixedDistance * fixedDistance - fixedHeight * fixedHeight);
+            _autoFollowHorizontalRadius = Mathf.Sqrt(autoModeSettings.fixedDistance * autoModeSettings.fixedDistance - autoModeSettings.fixedHeight * autoModeSettings.fixedHeight);
         }
 
         // 计算初始偏移量（目标正后方）
@@ -300,7 +316,7 @@ public class CameraFollow : MonoBehaviour
         initialDirection.Normalize();
 
         Vector3 horizontalOffset = initialDirection * _autoFollowHorizontalRadius;
-        Vector3 initialOffset = new Vector3(horizontalOffset.x, fixedHeight, horizontalOffset.z);
+        Vector3 initialOffset = new Vector3(horizontalOffset.x, autoModeSettings.fixedHeight, horizontalOffset.z);
 
         // 立即设置相机位置，防止镜头跳跃
         Vector3 targetPosition = cinemachineVirtualCamera.Follow.transform.position;
@@ -327,8 +343,8 @@ public class CameraFollow : MonoBehaviour
             throw new System.ArgumentException($"Invalid pitchDelta: {pitchDelta}");
         }
 
-        queuedYawDelta += yawDelta * orbitSensitivityYaw;
-        queuedPitchDelta += pitchDelta * orbitSensitivityPitch;
+        queuedYawDelta += yawDelta * manualModeSettings.orbitSensitivityYaw;
+        queuedPitchDelta += pitchDelta * manualModeSettings.orbitSensitivityPitch;
     }
 
     // /// <summary>

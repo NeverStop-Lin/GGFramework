@@ -18,10 +18,10 @@ MonoBehaviour:
   OrientationSharpness: 10
   MaxAirMoveSpeed: 10
   AirAcceleration: 50
-  AirDrag: 20
+  AirDrag: 30
   Gravity: {x: 0, y: -60, z: 0}
   JumpDuration: 0.5
-  JumpForce: 10
+  JumpForce: 15
   JumpSpeedCurve:
     serializedVersion: 2
     m_Curve:
