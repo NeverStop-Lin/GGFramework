@@ -12,12 +12,12 @@ namespace GameApp.Character
         [Header("基础移动")]
         [Label("最大稳定移动速度")]
         public float MaxStableMoveSpeed = 10f;
-        [Label("地面加速度", "线性加速/减速速率，越大响应越快")]
-        public float StableMovementSharpness = 80f;
+        [Label("地面移动平滑度", "数值越大加速/减速越快")]
+        public float StableMovementSmoothness = 80f;
         [Label("地面摩擦力", "无输入时的速度衰减，越大停止越快")]
         public float GroundFriction = 80f;
-        [Label("方向插值锐度")]
-        public float OrientationSharpness = 10f;
+        [Label("转向平滑度", "数值越大转向越快")]
+        public float RotationSmoothness = 10f;
 
         [Header("空中移动")]
         [Label("最大空中移动速度")]
@@ -38,8 +38,6 @@ namespace GameApp.Character
         public AnimationCurve JumpSpeedCurve;
         [Label("最大跳跃次数", "支持多段跳，1=单跳，2=二段跳")]
         public int MaxJumpCount = 2;
-        [Label("土狼时间", "离地后仍可跳的宽限时间")]
-        public float CoyoteTime = 10000f;
         [Label("跳跃缓冲时间", "提前按下跳跃的缓冲时间")]
         public float JumpBufferTime = 0.15f;
     }

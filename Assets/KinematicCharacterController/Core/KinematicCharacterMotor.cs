@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace KinematicCharacterController
 {
+    /// <summary>
+    /// Rigidbody interaction type / 刚体交互类型
+    /// </summary>
     public enum RigidbodyInteractionType
     {
         None,
@@ -11,6 +14,9 @@ namespace KinematicCharacterController
         SimulatedDynamic
     }
 
+    /// <summary>
+    /// Step handling method / 台阶处理方式
+    /// </summary>
     public enum StepHandlingMethod
     {
         None,
@@ -18,6 +24,9 @@ namespace KinematicCharacterController
         Extra
     }
 
+    /// <summary>
+    /// Movement sweep state / 移动扫描状态
+    /// </summary>
     public enum MovementSweepState
     {
         Initial,
@@ -29,6 +38,7 @@ namespace KinematicCharacterController
     /// <summary>
     /// Represents the entire state of a character motor that is pertinent for simulation.
     /// Use this to save state or revert to past state
+    /// 表示角色马达的完整状态，用于模拟。可用于保存状态或恢复到之前的状态
     /// </summary>
     [System.Serializable]
     public struct KinematicCharacterMotorState
@@ -48,6 +58,7 @@ namespace KinematicCharacterController
 
     /// <summary>
     /// Describes an overlap between the character capsule and another collider
+    /// 描述角色胶囊与另一个碰撞器之间的重叠
     /// </summary>
     public struct OverlapResult
     {
@@ -63,17 +74,26 @@ namespace KinematicCharacterController
 
     /// <summary>
     /// Contains all the information for the motor's grounding status
+    /// 包含马达接地状态的所有信息
     /// </summary>
     public struct CharacterGroundingReport
     {
+        /// <summary> 是否检测到地面  </summary>
         public bool FoundAnyGround;
+        /// <summary> 是否稳定在地面  </summary>
         public bool IsStableOnGround;
+        /// <summary>是否防止吸附到地面</summary>
         public bool SnappingPrevented;
+        /// <summary> 地面法线  </summary>
         public Vector3 GroundNormal;
+        /// <summary> 内部地面法线  </summary>
         public Vector3 InnerGroundNormal;
+        /// <summary> 外部地面法线  </summary>
         public Vector3 OuterGroundNormal;
 
+        /// <summary> 地面碰撞器  </summary>
         public Collider GroundCollider;
+        /// <summary> 地面点  </summary>
         public Vector3 GroundPoint;
 
         public void CopyFrom(CharacterTransientGroundingReport transientGroundingReport)
@@ -92,6 +112,7 @@ namespace KinematicCharacterController
 
     /// <summary>
     /// Contains the simulation-relevant information for the motor's grounding status
+    /// 包含马达接地状态中与模拟相关的信息
     /// </summary>
     public struct CharacterTransientGroundingReport
     {
@@ -115,6 +136,7 @@ namespace KinematicCharacterController
 
     /// <summary>
     /// Contains all the information from a hit stability evaluation
+    /// 包含碰撞稳定性评估的所有信息
     /// </summary>
     public struct HitStabilityReport
     {
@@ -139,6 +161,7 @@ namespace KinematicCharacterController
 
     /// <summary>
     /// Contains the information of hit rigidbodies during the movement phase, so they can be processed afterwards
+    /// 包含移动阶段碰撞到的刚体信息，用于后续处理
     /// </summary>
     public struct RigidbodyProjectionHit
     {
@@ -151,306 +174,354 @@ namespace KinematicCharacterController
 
     /// <summary>
     /// Component that manages character collisions and movement solving
+    /// 管理角色碰撞和移动求解的组件
     /// </summary>
     [RequireComponent(typeof(CapsuleCollider))]
     public class KinematicCharacterMotor : MonoBehaviour
     {
 #pragma warning disable 0414
-        [Header("Components")]
+        [Header("组件")]
         /// <summary>
-        /// The capsule collider of this motor
+        /// The capsule collider of this motor / 此马达的胶囊碰撞器
         /// </summary>
         [ReadOnly]
         public CapsuleCollider Capsule;
 
-        [Header("Capsule Settings")]
+        [Header("胶囊设置")]
         /// <summary>
-        /// Radius of the character's capsule
+        /// Radius of the character's capsule / 角色胶囊的半径
         /// </summary>
         [SerializeField]
-        [Tooltip("Radius of the Character Capsule")]
+        [Tooltip("角色胶囊的半径")]
         private float CapsuleRadius = 0.5f;
         /// <summary>
-        /// Height of the character's capsule
+        /// Height of the character's capsule / 角色胶囊的高度
         /// </summary>
         [SerializeField]
-        [Tooltip("Height of the Character Capsule")]
+        [Tooltip("角色胶囊的高度")]
         private float CapsuleHeight = 2f;
         /// <summary>
-        /// Local y position of the character's capsule center
+        /// Local y position of the character's capsule center / 角色胶囊中心的本地Y位置
         /// </summary>
         [SerializeField]
-        [Tooltip("Height of the Character Capsule")]
+        [Tooltip("角色胶囊中心的本地Y位置")]
         private float CapsuleYOffset = 1f;
         /// <summary>
-        /// Physics material of the character's capsule
+        /// Physics material of the character's capsule / 角色胶囊的物理材质（不影响角色移动，仅影响与其碰撞的物体）
         /// </summary>
         [SerializeField]
-        [Tooltip("Physics material of the Character Capsule (Does not affect character movement. Only affects things colliding with it)")]
+        [Tooltip("角色胶囊的物理材质（不影响角色移动，仅影响与其碰撞的物体）")]
 #pragma warning disable 0649
         private PhysicMaterial CapsulePhysicsMaterial;
 #pragma warning restore 0649
 
 
-        [Header("Grounding settings")]
+        [Header("地面设置")]
         /// <summary>
         /// Increases the range of ground detection, to allow snapping to ground at very high speeds
+        /// 增加地面检测范围，允许在高速下吸附到地面
         /// </summary>    
-        [Tooltip("Increases the range of ground detection, to allow snapping to ground at very high speeds")]
+        [Tooltip("增加地面检测范围，允许在高速下吸附到地面")]
         public float GroundDetectionExtraDistance = 0f;
         /// <summary>
         /// Maximum slope angle on which the character can be stable
+        /// 角色可以保持稳定的最大斜坡角度
         /// </summary>    
         [Range(0f, 89f)]
-        [Tooltip("Maximum slope angle on which the character can be stable")]
+        [Tooltip("角色可以保持稳定的最大斜坡角度")]
         public float MaxStableSlopeAngle = 60f;
         /// <summary>
         /// Which layers can the character be considered stable on
+        /// 角色可以稳定站立在哪些层上
         /// </summary>    
-        [Tooltip("Which layers can the character be considered stable on")]
+        [Tooltip("角色可以稳定站立在哪些层上")]
         public LayerMask StableGroundLayers = -1;
         /// <summary>
         /// Notifies the Character Controller when discrete collisions are detected
+        /// 检测到离散碰撞时通知角色控制器
         /// </summary>    
-        [Tooltip("Notifies the Character Controller when discrete collisions are detected")]
+        [Tooltip("检测到离散碰撞时通知角色控制器")]
         public bool DiscreteCollisionEvents = false;
 
 
-        [Header("Step settings")]
+        [Header("台阶设置")]
         /// <summary>
         /// Handles properly detecting grounding status on steps, but has a performance cost.
+        /// 正确处理台阶上的接地状态检测，但有性能开销
         /// </summary>
-        [Tooltip("Handles properly detecting grounding status on steps, but has a performance cost.")]
+        [Tooltip("正确处理台阶上的接地状态检测，但有性能开销")]
         public StepHandlingMethod StepHandling = StepHandlingMethod.Standard;
         /// <summary>
         /// Maximum height of a step which the character can climb
+        /// 角色可以攀爬的台阶最大高度
         /// </summary>    
-        [Tooltip("Maximum height of a step which the character can climb")]
+        [Tooltip("角色可以攀爬的台阶最大高度")]
         public float MaxStepHeight = 0.5f;
         /// <summary>
         /// Can the character step up obstacles even if it is not currently stable?
+        /// 角色是否可以在不稳定状态下攀爬障碍物
         /// </summary>    
-        [Tooltip("Can the character step up obstacles even if it is not currently stable?")]
+        [Tooltip("角色是否可以在不稳定状态下攀爬障碍物")]
         public bool AllowSteppingWithoutStableGrounding = false;
         /// <summary>
-        /// Minimum length of a step that the character can step on (used in Extra stepping method. Use this to let the character step on steps that are smaller that its radius
+        /// Minimum length of a step that the character can step on (used in Extra stepping method). Use this to let the character step on steps that are smaller that its radius
+        /// 角色可以踩踏的台阶最小长度（用于额外台阶处理方式）。用于让角色可以踩踏小于其半径的台阶
         /// </summary>    
-        [Tooltip("Minimum length of a step that the character can step on (used in Extra stepping method). Use this to let the character step on steps that are smaller that its radius")]
+        [Tooltip("角色可以踩踏的台阶最小长度（用于额外台阶处理方式）。用于让角色可以踩踏小于其半径的台阶")]
         public float MinRequiredStepDepth = 0.1f;
 
 
-        [Header("Ledge settings")]
+        [Header("边缘设置")]
         /// <summary>
         /// Handles properly detecting ledge information and grounding status, but has a performance cost.
+        /// 正确处理边缘信息和接地状态检测，但有性能开销
         /// </summary>
-        [Tooltip("Handles properly detecting ledge information and grounding status, but has a performance cost.")]
+        [Tooltip("正确处理边缘信息和接地状态检测，但有性能开销")]
         public bool LedgeAndDenivelationHandling = true;
         /// <summary>
         /// The distance from the capsule central axis at which the character can stand on a ledge and still be stable
+        /// 角色可以在边缘上保持稳定的距胶囊中心轴的最大距离
         /// </summary>    
-        [Tooltip("The distance from the capsule central axis at which the character can stand on a ledge and still be stable")]
+        [Tooltip("角色可以在边缘上保持稳定的距胶囊中心轴的最大距离")]
         public float MaxStableDistanceFromLedge = 0.5f;
         /// <summary>
         /// Prevents snapping to ground on ledges beyond a certain velocity
+        /// 超过一定速度时防止在边缘上吸附到地面
         /// </summary>    
-        [Tooltip("Prevents snapping to ground on ledges beyond a certain velocity")]
+        [Tooltip("超过一定速度时防止在边缘上吸附到地面")]
         public float MaxVelocityForLedgeSnap = 0f;
         /// <summary>
         /// The maximun downward slope angle change that the character can be subjected to and still be snapping to the ground
+        /// 角色可以承受的最大向下斜坡角度变化，仍能吸附到地面
         /// </summary>    
-        [Tooltip("The maximun downward slope angle change that the character can be subjected to and still be snapping to the ground")]
+        [Tooltip("角色可以承受的最大向下斜坡角度变化，仍能吸附到地面")]
         [Range(1f, 180f)]
         public float MaxStableDenivelationAngle = 180f;
 
 
-        [Header("Rigidbody interaction settings")]
+        [Header("刚体交互设置")]
         /// <summary>
         /// Handles properly being pushed by and standing on PhysicsMovers or dynamic rigidbodies. Also handles pushing dynamic rigidbodies
+        /// 正确处理被物理移动器或动态刚体推动和站在其上。同时处理推动动态刚体
         /// </summary>
-        [Tooltip("Handles properly being pushed by and standing on PhysicsMovers or dynamic rigidbodies. Also handles pushing dynamic rigidbodies")]
+        [Tooltip("正确处理被物理移动器或动态刚体推动和站在其上。同时处理推动动态刚体")]
         public bool InteractiveRigidbodyHandling = true;
         /// <summary>
-        /// How the character interacts with non-kinematic rigidbodies. \"Kinematic\" mode means the character pushes the rigidbodies with infinite force (as a kinematic body would). \"SimulatedDynamic\" pushes the rigidbodies with a simulated mass value.
+        /// How the character interacts with non-kinematic rigidbodies. "Kinematic" mode means the character pushes the rigidbodies with infinite force (as a kinematic body would). "SimulatedDynamic" pushes the rigidbodies with a simulated mass value.
+        /// 角色如何与非运动学刚体交互。"Kinematic"模式表示角色以无限力推动刚体（如运动学刚体）。"SimulatedDynamic"使用模拟质量值推动刚体
         /// </summary>
-        [Tooltip("How the character interacts with non-kinematic rigidbodies. \"Kinematic\" mode means the character pushes the rigidbodies with infinite force (as a kinematic body would). \"SimulatedDynamic\" pushes the rigidbodies with a simulated mass value.")]
+        [Tooltip("角色如何与非运动学刚体交互。Kinematic模式表示角色以无限力推动刚体（如运动学刚体）。SimulatedDynamic使用模拟质量值推动刚体")]
         public RigidbodyInteractionType RigidbodyInteractionType;
-        [Tooltip("Mass used for pushing bodies")]
+        /// <summary>
+        /// Mass used for pushing bodies / 用于推动刚体的质量
+        /// </summary>
+        [Tooltip("用于推动刚体的质量")]
         public float SimulatedCharacterMass = 1f;
         /// <summary>
         /// Determines if the character preserves moving platform velocities when de-grounding from them
+        /// 确定角色在脱离移动平台时是否保留移动平台的速度
         /// </summary>
-        [Tooltip("Determines if the character preserves moving platform velocities when de-grounding from them")]
+        [Tooltip("确定角色在脱离移动平台时是否保留移动平台的速度")]
         public bool PreserveAttachedRigidbodyMomentum = true;
 
 
-        [Header("Constraints settings")]
+        [Header("约束设置")]
         /// <summary>
         /// Determines if the character's movement uses the planar constraint
+        /// 确定角色的移动是否使用平面约束
         /// </summary>
-        [Tooltip("Determines if the character's movement uses the planar constraint")]
+        [Tooltip("确定角色的移动是否使用平面约束")]
         public bool HasPlanarConstraint = false;
         /// <summary>
         /// Defines the plane that the character's movement is constrained on, if HasMovementConstraintPlane is active
+        /// 定义角色移动被约束的平面，如果启用平面约束
         /// </summary>
-        [Tooltip("Defines the plane that the character's movement is constrained on, if HasMovementConstraintPlane is active")]
+        [Tooltip("定义角色移动被约束的平面，如果启用平面约束")]
         public Vector3 PlanarConstraintAxis = Vector3.forward;
 
-        [Header("Other settings")]
+        [Header("其他设置")]
         /// <summary>
         /// How many times can we sweep for movement per update
+        /// 每次更新可以进行多少次移动扫描
         /// </summary>
-        [Tooltip("How many times can we sweep for movement per update")]
+        [Tooltip("每次更新可以进行多少次移动扫描")]
         public int MaxMovementIterations = 5;
         /// <summary>
         /// How many times can we check for decollision per update
+        /// 每次更新可以检查多少次去碰撞
         /// </summary>
-        [Tooltip("How many times can we check for decollision per update")]
+        [Tooltip("每次更新可以检查多少次去碰撞")]
         public int MaxDecollisionIterations = 1;
         /// <summary>
         /// Checks for overlaps before casting movement, making sure all collisions are detected even when already intersecting geometry (has a performance cost, but provides safety against tunneling through colliders)
+        /// 在投射移动前检查重叠，确保即使已与几何体相交也能检测到所有碰撞（有性能开销，但可防止穿透碰撞器）
         /// </summary>
-        [Tooltip("Checks for overlaps before casting movement, making sure all collisions are detected even when already intersecting geometry (has a performance cost, but provides safety against tunneling through colliders)")]
+        [Tooltip("在投射移动前检查重叠，确保即使已与几何体相交也能检测到所有碰撞（有性能开销，但可防止穿透碰撞器）")]
         public bool CheckMovementInitialOverlaps = true;
         /// <summary>
         /// Sets the velocity to zero if exceed max movement iterations
+        /// 如果超过最大移动迭代次数，将速度设为零
         /// </summary>
-        [Tooltip("Sets the velocity to zero if exceed max movement iterations")]
+        [Tooltip("如果超过最大移动迭代次数，将速度设为零")]
         public bool KillVelocityWhenExceedMaxMovementIterations = true;
         /// <summary>
         /// Sets the remaining movement to zero if exceed max movement iterations
+        /// 如果超过最大移动迭代次数，将剩余移动设为零
         /// </summary>
-        [Tooltip("Sets the remaining movement to zero if exceed max movement iterations")]
+        [Tooltip("如果超过最大移动迭代次数，将剩余移动设为零")]
         public bool KillRemainingMovementWhenExceedMaxMovementIterations = true;
 
         /// <summary>
-        /// Contains the current grounding information
+        /// Contains the current grounding information / 包含当前接地信息
         /// </summary>
         [System.NonSerialized]
         public CharacterGroundingReport GroundingStatus = new CharacterGroundingReport();
         /// <summary>
-        /// Contains the previous grounding information
+        /// Contains the previous grounding information / 包含之前的接地信息
         /// </summary>
         [System.NonSerialized]
         public CharacterTransientGroundingReport LastGroundingStatus = new CharacterTransientGroundingReport();
         /// <summary>
         /// Specifies the LayerMask that the character's movement algorithm can detect collisions with. By default, this uses the rigidbody's layer's collision matrix
+        /// 指定角色移动算法可以检测碰撞的层遮罩。默认使用刚体层的碰撞矩阵
         /// </summary>
         [System.NonSerialized]
         public LayerMask CollidableLayers = -1;
 
         /// <summary>
-        /// The Transform of the character motor
+        /// The Transform of the character motor / 角色马达的变换组件
         /// </summary>
         public Transform Transform { get { return _transform; } }
         private Transform _transform;
         /// <summary>
         /// The character's goal position in its movement calculations (always up-to-date during the character update phase)
+        /// 角色在移动计算中的目标位置（在角色更新阶段始终保持最新）
         /// </summary>
         public Vector3 TransientPosition { get { return _transientPosition; } }
         private Vector3 _transientPosition;
         /// <summary>
         /// The character's up direction (always up-to-date during the character update phase)
+        /// 角色的上方向（在角色更新阶段始终保持最新）
         /// </summary>
         public Vector3 CharacterUp { get { return _characterUp; } }
         private Vector3 _characterUp;
         /// <summary>
         /// The character's forward direction (always up-to-date during the character update phase)
+        /// 角色的前方向（在角色更新阶段始终保持最新）
         /// </summary>
         public Vector3 CharacterForward { get { return _characterForward; } }
         private Vector3 _characterForward;
         /// <summary>
         /// The character's right direction (always up-to-date during the character update phase)
+        /// 角色的右方向（在角色更新阶段始终保持最新）
         /// </summary>
         public Vector3 CharacterRight { get { return _characterRight; } }
         private Vector3 _characterRight;
         /// <summary>
         /// The character's position before the movement calculations began
+        /// 移动计算开始前角色的位置
         /// </summary>
         public Vector3 InitialSimulationPosition { get { return _initialSimulationPosition; } }
         private Vector3 _initialSimulationPosition;
         /// <summary>
         /// The character's rotation before the movement calculations began
+        /// 移动计算开始前角色的旋转
         /// </summary>
         public Quaternion InitialSimulationRotation { get { return _initialSimulationRotation; } }
         private Quaternion _initialSimulationRotation;
         /// <summary>
         /// Represents the Rigidbody to stay attached to
+        /// 表示要附加到的刚体
         /// </summary>
         public Rigidbody AttachedRigidbody { get { return _attachedRigidbody; } }
         private Rigidbody _attachedRigidbody;
         /// <summary>
         /// Vector3 from the character transform position to the capsule center
+        /// 从角色变换位置到胶囊中心的向量
         /// </summary>
         public Vector3 CharacterTransformToCapsuleCenter { get { return _characterTransformToCapsuleCenter; } }
         private Vector3 _characterTransformToCapsuleCenter;
         /// <summary>
         /// Vector3 from the character transform position to the capsule bottom
+        /// 从角色变换位置到胶囊底部的向量
         /// </summary>
         public Vector3 CharacterTransformToCapsuleBottom { get { return _characterTransformToCapsuleBottom; } }
         private Vector3 _characterTransformToCapsuleBottom;
         /// <summary>
         /// Vector3 from the character transform position to the capsule top
+        /// 从角色变换位置到胶囊顶部的向量
         /// </summary>
         public Vector3 CharacterTransformToCapsuleTop { get { return _characterTransformToCapsuleTop; } }
         private Vector3 _characterTransformToCapsuleTop;
         /// <summary>
         /// Vector3 from the character transform position to the capsule bottom hemi center
+        /// 从角色变换位置到胶囊底部半球中心的向量
         /// </summary>
         public Vector3 CharacterTransformToCapsuleBottomHemi { get { return _characterTransformToCapsuleBottomHemi; } }
         private Vector3 _characterTransformToCapsuleBottomHemi;
         /// <summary>
         /// Vector3 from the character transform position to the capsule top hemi center
+        /// 从角色变换位置到胶囊顶部半球中心的向量
         /// </summary>
         public Vector3 CharacterTransformToCapsuleTopHemi { get { return _characterTransformToCapsuleTopHemi; } }
         private Vector3 _characterTransformToCapsuleTopHemi;
         /// <summary>
         /// The character's velocity resulting from standing on rigidbodies or PhysicsMover
+        /// 角色站在刚体或物理移动器上产生的速度
         /// </summary>
         public Vector3 AttachedRigidbodyVelocity { get { return _attachedRigidbodyVelocity; } }
         private Vector3 _attachedRigidbodyVelocity;
         /// <summary>
         /// The number of overlaps detected so far during character update (is reset at the beginning of the update)
+        /// 角色更新期间检测到的重叠数量（在更新开始时重置）
         /// </summary>
         public int OverlapsCount { get { return _overlapsCount; } }
         private int _overlapsCount;
         /// <summary>
         /// The overlaps detected so far during character update
+        /// 角色更新期间检测到的重叠
         /// </summary>
         public OverlapResult[] Overlaps { get { return _overlaps; } }
         private OverlapResult[] _overlaps = new OverlapResult[MaxRigidbodyOverlapsCount];
 
         /// <summary>
-        /// The motor's assigned controller
+        /// The motor's assigned controller / 马达分配的控制器
         /// </summary>
         [NonSerialized]
         public ICharacterController CharacterController;
         /// <summary>
         /// Did the motor's last swept collision detection find a ground?
+        /// 马达的最后一次扫描碰撞检测是否找到地面
         /// </summary>
         [NonSerialized]
         public bool LastMovementIterationFoundAnyGround;
         /// <summary>
         /// Index of this motor in KinematicCharacterSystem arrays
+        /// 此马达在KinematicCharacterSystem数组中的索引
         /// </summary>
         [NonSerialized]
         public int IndexInCharacterSystem;
         /// <summary>
         /// Remembers initial position before all simulation are done
+        /// 记录所有模拟完成前的初始位置
         /// </summary>
         [NonSerialized]
         public Vector3 InitialTickPosition;
         /// <summary>
         /// Remembers initial rotation before all simulation are done
+        /// 记录所有模拟完成前的初始旋转
         /// </summary>
         [NonSerialized]
         public Quaternion InitialTickRotation;
         /// <summary>
         /// Specifies a Rigidbody to stay attached to
+        /// 指定要附加到的刚体
         /// </summary>
         [NonSerialized]
         public Rigidbody AttachedRigidbodyOverride;
         /// <summary>
         /// The character's velocity resulting from direct movement
+        /// 角色直接移动产生的速度
         /// </summary>
         [NonSerialized]
         public Vector3 BaseVelocity;
@@ -481,6 +552,7 @@ namespace KinematicCharacterController
         private Quaternion _transientRotation;
         /// <summary>
         /// The character's goal rotation in its movement calculations (always up-to-date during the character update phase)
+        /// 角色在移动计算中的目标旋转（在角色更新阶段始终保持最新）
         /// </summary>
         public Quaternion TransientRotation
         {
@@ -499,6 +571,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// The character's total velocity, including velocity from standing on rigidbodies or PhysicsMover
+        /// 角色的总速度，包括站在刚体或物理移动器上产生的速度
         /// </summary>
         public Vector3 Velocity
         {
@@ -560,6 +633,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Handle validating all required values
+        /// 处理验证所有必需的值
         /// </summary>
         public void ValidateData()
         {
@@ -586,6 +660,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Sets whether or not the capsule collider will detect collisions
+        /// 设置胶囊碰撞器是否检测碰撞
         /// </summary>
         public void SetCapsuleCollisionsActivation(bool collisionsActive)
         {
@@ -594,6 +669,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Sets whether or not the motor will solve collisions when moving (or moved onto)
+        /// 设置马达在移动（或被移动）时是否解决碰撞
         /// </summary>
         public void SetMovementCollisionsSolvingActivation(bool movementCollisionsSolvingActive)
         {
@@ -602,6 +678,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Sets whether or not grounding will be evaluated for all hits
+        /// 设置是否对所有碰撞评估接地状态
         /// </summary>
         public void SetGroundSolvingActivation(bool stabilitySolvingActive)
         {
@@ -610,6 +687,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Sets the character's position directly
+        /// 直接设置角色的位置
         /// </summary>
         public void SetPosition(Vector3 position, bool bypassInterpolation = true)
         {
@@ -625,6 +703,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Sets the character's rotation directly
+        /// 直接设置角色的旋转
         /// </summary>
         public void SetRotation(Quaternion rotation, bool bypassInterpolation = true)
         {
@@ -640,6 +719,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Sets the character's position and rotation directly
+        /// 直接设置角色的位置和旋转
         /// </summary>
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation, bool bypassInterpolation = true)
         {
@@ -658,6 +738,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Moves the character position, taking all movement collision solving int account. The actual move is done the next time the motor updates are called
+        /// 移动角色位置，考虑所有移动碰撞求解。实际移动在下次马达更新时执行
         /// </summary>
         public void MoveCharacter(Vector3 toPosition)
         {
@@ -667,6 +748,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Moves the character rotation. The actual move is done the next time the motor updates are called
+        /// 移动角色旋转。实际移动在下次马达更新时执行
         /// </summary>
         public void RotateCharacter(Quaternion toRotation)
         {
@@ -676,6 +758,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Returns all the state information of the motor that is pertinent for simulation
+        /// 返回与模拟相关的马达的所有状态信息
         /// </summary>
         public KinematicCharacterMotorState GetState()
         {
@@ -698,6 +781,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Applies a motor state instantly
+        /// 立即应用马达状态
         /// </summary>
         public void ApplyState(KinematicCharacterMotorState state, bool bypassInterpolation = true)
         {
@@ -714,7 +798,8 @@ namespace KinematicCharacterController
         }
 
         /// <summary>
-        /// Resizes capsule. ALso caches importand capsule size data
+        /// Resizes capsule. Also caches important capsule size data
+        /// 调整胶囊大小。同时缓存重要的胶囊尺寸数据
         /// </summary>
         public void SetCapsuleDimensions(float radius, float height, float yOffset)
         {
@@ -764,6 +849,12 @@ namespace KinematicCharacterController
         /// - Solving initial collision overlaps
         /// - Ground probing
         /// - Handle detecting potential interactable rigidbodies
+        /// 更新阶段1应在物理移动器计算完速度后但在模拟目标位置/旋转前调用。负责：
+        /// - 初始化所有更新值
+        /// - 处理MovePosition调用
+        /// - 解决初始碰撞重叠
+        /// - 地面探测
+        /// - 处理检测潜在可交互刚体
         /// </summary>
         public void UpdatePhase1(float deltaTime)
         {
@@ -1026,6 +1117,14 @@ namespace KinematicCharacterController
         /// - Solving potential attached rigidbody overlaps
         /// - Solving Velocity
         /// - Applying planar constraint
+        /// 更新阶段2应在物理移动器模拟完目标位置/旋转后调用。
+        /// 在此结束时，TransientPosition/Rotation值将与马达在移动结束时应处于的位置保持一致。
+        /// 负责：
+        /// - 解决旋转
+        /// - 处理MoveRotation调用
+        /// - 解决潜在的附加刚体重叠
+        /// - 解决速度
+        /// - 应用平面约束
         /// </summary>
         public void UpdatePhase2(float deltaTime)
         {
@@ -1203,6 +1302,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Determines if motor can be considered stable on given slope normal
+        /// 确定马达是否可以在给定斜坡法线上保持稳定
         /// </summary>
         private bool IsStableOnNormal(Vector3 normal)
         {
@@ -1258,7 +1358,8 @@ namespace KinematicCharacterController
         }
 
         /// <summary>
-        /// Probes for valid ground and midifies the input transientPosition if ground snapping occurs
+        /// Probes for valid ground and modifies the input transientPosition if ground snapping occurs
+        /// 探测有效地面，如果发生地面吸附则修改输入的临时位置
         /// </summary>
         public void ProbeGround(ref Vector3 probingPosition, Quaternion atRotation, float probingDistance, ref CharacterGroundingReport groundingReport)
         {
@@ -1336,6 +1437,7 @@ namespace KinematicCharacterController
 
         /// <summary>
         /// Forces the character to unground itself on its next grounding update
+        /// 强制角色在下一次接地更新时取消接地
         /// </summary>
         public void ForceUnground(float time = 0.1f)
         {
@@ -1351,6 +1453,9 @@ namespace KinematicCharacterController
         /// <summary>
         /// Returns the direction adjusted to be tangent to a specified surface normal relatively to the character's up direction.
         /// Useful for reorienting a direction on a slope without any lateral deviation in trajectory
+        /// 
+        /// 返回一个相对于角色上方向，调整到与指定表面法线切线的方向。
+        /// 用于将一个方向重定向到斜坡表面而没有横向偏移。
         /// </summary>
         public Vector3 GetDirectionTangentToSurface(Vector3 direction, Vector3 surfaceNormal)
         {
@@ -1361,8 +1466,9 @@ namespace KinematicCharacterController
         /// <summary>
         /// Moves the character's position by given movement while taking into account all physics simulation, step-handling and 
         /// velocity projection rules that affect the character motor
+        /// 按给定移动量移动角色位置，同时考虑所有影响角色马达的物理模拟、台阶处理和速度投影规则
         /// </summary>
-        /// <returns> Returns false if movement could not be solved until the end </returns>
+        /// <returns> Returns false if movement could not be solved until the end / 如果移动无法完全解决则返回false </returns>
         private bool InternalCharacterMove(ref Vector3 transientVelocity, float deltaTime)
         {
             if (deltaTime <= 0f)
@@ -1866,7 +1972,7 @@ namespace KinematicCharacterController
                         else if (!hitBodyIsDynamic)
                         {
                             PhysicsMover physicsMover = bodyHit.Rigidbody.GetComponent<PhysicsMover>();
-                            if(physicsMover)
+                            if (physicsMover)
                             {
                                 hitBodyVelocity = physicsMover.Velocity;
                             }
@@ -2118,7 +2224,7 @@ namespace KinematicCharacterController
             Vector3 characterUp = characterRotation * _cachedWorldUp;
             Vector3 verticalCharToHit = Vector3.Project((hitPoint - characterPosition), characterUp);
             Vector3 horizontalCharToHitDirection = Vector3.ProjectOnPlane((hitPoint - characterPosition), characterUp).normalized;
-            Vector3 stepCheckStartPos = (hitPoint - verticalCharToHit) + (characterUp * MaxStepHeight) + (horizontalCharToHitDirection * CollisionOffset * 3f); 
+            Vector3 stepCheckStartPos = (hitPoint - verticalCharToHit) + (characterUp * MaxStepHeight) + (horizontalCharToHitDirection * CollisionOffset * 3f);
 
             // Do outer step check with capsule cast on hit point
             nbStepHits = CharacterCollisionsSweep(
@@ -2291,7 +2397,7 @@ namespace KinematicCharacterController
             {
                 linearVelocity = interactiveRigidbody.velocity;
                 angularVelocity = interactiveRigidbody.angularVelocity;
-                if(interactiveRigidbody.isKinematic)
+                if (interactiveRigidbody.isKinematic)
                 {
                     PhysicsMover physicsMover = interactiveRigidbody.GetComponent<PhysicsMover>();
                     if (physicsMover)

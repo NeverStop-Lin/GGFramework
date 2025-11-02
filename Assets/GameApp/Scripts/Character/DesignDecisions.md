@@ -24,7 +24,6 @@
 - ✅ 基础移动（地面 + 空中）
 - ✅ 多段跳跃系统
 - ✅ 相机相对移动
-- ✅ 土狼时间（Coyote Time）
 - ✅ 跳跃缓冲（Jump Buffer）
 
 ### 3. 跳跃系统设计
@@ -41,7 +40,6 @@
 - **添加**: `JumpSpeed`（基础跳跃速度，单位：m/s）
 - **添加**: `JumpSpeedCurve`（AnimationCurve，X=时间进度0-1，Y=速度倍率0-1）
 - **保留**: `MaxJumpCount`（最大跳跃次数，支持多段跳）
-- **保留**: `CoyoteTime`（土狼时间）
 - **保留**: `JumpBufferTime`（跳跃缓冲时间）
 - **移除**: ~~`JumpHeight`~~（不再强制控制高度）
 - **移除**: ~~`JumpUpSpeed`~~（被 `JumpSpeed` 替代）
@@ -84,20 +82,16 @@
   - `bool IsActive`（跳跃是否激活）
   - `float ElapsedTime`（已经过的时间）
   - `int ConsumedCount`（已消耗的跳跃次数）
-  - `float CoyoteTimeRemaining`（剩余土狼时间）
   - `float BufferTimeRemaining`（剩余跳跃缓冲时间）
 - **位置**: 定义在 CharacterController 类内部（private struct）
 - **多段跳处理**: 每次跳跃重置 `ElapsedTime = 0`，独立持续时间
 
-#### 3.10 土狼时间与跳跃缓冲
+#### 3.10 跳跃缓冲
 - **集成方式**: 计时器集成到 JumpState 结构体中
 - **更新时机**: 
-  - 着地时重置 `CoyoteTimeRemaining = Config.CoyoteTime`
-  - 离地后每帧减少 `CoyoteTimeRemaining -= deltaTime`
   - 按下跳跃时设置 `BufferTimeRemaining = Config.JumpBufferTime`
   - 每帧减少 `BufferTimeRemaining -= deltaTime`
 - **判定逻辑**: 
-  - 地面跳：`IsGrounded || CoyoteTimeRemaining > 0`
   - 缓冲生效：`BufferTimeRemaining > 0`
 
 #### 3.11 空中跳跃处理
@@ -243,14 +237,13 @@ public struct CharacterInputData
 - **保留参数**: 
   - 基础移动：`MaxStableMoveSpeed`, `StableMovementSharpness`, `OrientationSharpness`
   - 空中移动：`MaxAirMoveSpeed`, `AirAcceleration`, `AirDrag`, `Gravity`
-  - 跳跃系统：`MaxJumpCount`, `CoyoteTime`, `JumpBufferTime`
+  - 跳跃系统：`MaxJumpCount`, `JumpBufferTime`
 
 #### 7.2 推荐默认配置值
 - **跳跃系统**:
   - `JumpDuration = 0.4f`（跳跃持续时间，适中值）
   - `JumpSpeed = 12f`（基础跳跃速度，配合默认曲线和重力）
   - `MaxJumpCount = 2`（二段跳）
-  - `CoyoteTime = 0.12f`（土狼时间）
   - `JumpBufferTime = 0.15f`（跳跃缓冲）
 - **基础移动**:
   - `MaxStableMoveSpeed = 10f`
@@ -308,7 +301,7 @@ public struct CharacterInputData
   - JumpState 字段调整：移除 `AccumulatedHeight` 和 `StartPosition`，添加 `ElapsedTime`
 - 2025-10-31 17:00: 完成所有实现细节决策
   - 移除 `InterruptJumpSpeed`（不再需要打断机制）
-  - JumpState 集成土狼时间和跳跃缓冲计时器（`CoyoteTimeRemaining`, `BufferTimeRemaining`）
+  - JumpState 集成跳跃缓冲计时器（`BufferTimeRemaining`）
   - 确认默认曲线：平台跳曲线 `(0, 1.0) → (0.8, 0.8) → (1.0, 0)`，Smooth插值
   - 确认头顶碰撞检测：双重检测（速度截断 + OnMovementHit回调）
   - 确认状态转换：所有跳跃进入 `Jumping` 状态

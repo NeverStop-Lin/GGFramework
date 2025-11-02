@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: CharacterControllerConfig
   m_EditorClassIdentifier: 
   MaxStableMoveSpeed: 10
-  StableMovementSharpness: 80
-  GroundFriction: 80
-  OrientationSharpness: 10
+  StableMovementSmoothness: 80
+  GroundFriction: 15
+  RotationSmoothness: 10
   MaxAirMoveSpeed: 10
   AirAcceleration: 50
   AirDrag: 30
-  Gravity: {x: 0, y: -60, z: 0}
+  Gravity: {x: 0, y: -30, z: 0}
   JumpDuration: 0.5
   JumpForce: 15
   JumpSpeedCurve:
@@ -47,5 +47,4 @@ MonoBehaviour:
     m_PostInfinity: 1
     m_RotationOrder: 4
   MaxJumpCount: 2
-  CoyoteTime: 10000
   JumpBufferTime: 0.15

@@ -52,7 +52,7 @@ public AnimationCurve JumpSpeedCurve;
 确保以下参数保持不变：
 - 基础移动：`MaxStableMoveSpeed`, `StableMovementSharpness`, `OrientationSharpness`
 - 空中移动：`MaxAirMoveSpeed`, `AirAcceleration`, `AirDrag`, `Gravity`
-- 跳跃系统：`MaxJumpCount`, `CoyoteTime`, `JumpBufferTime`
+- 跳跃系统：`MaxJumpCount`, `JumpBufferTime`
 
 ---
 
@@ -100,7 +100,6 @@ private struct JumpState
     public bool IsActive;                // 跳跃是否激活
     public float ElapsedTime;            // 已经过的时间
     public int ConsumedCount;            // 已消耗的跳跃次数
-    public float CoyoteTimeRemaining;    // 剩余土狼时间
     public float BufferTimeRemaining;    // 剩余跳跃缓冲时间
     
     public void Reset()
@@ -108,7 +107,6 @@ private struct JumpState
         IsActive = false;
         ElapsedTime = 0f;
         ConsumedCount = 0;
-        CoyoteTimeRemaining = 0f;
         BufferTimeRemaining = 0f;
     }
 }
@@ -211,8 +209,8 @@ public void UpdateVelocity(ref Vector3 currentVelocity, float deltaTime)
 {
     bool isStableOnGround = Motor.GroundingStatus.IsStableOnGround;
     
-    // 1. 更新土狼时间和跳跃缓冲
-    UpdateJumpTimers(isStableOnGround, deltaTime);
+    // 1. 更新跳跃缓冲
+    UpdateJumpTimers(deltaTime);
     
     // 2. 状态维护（着地/离地转换）
     UpdateCharacterState(isStableOnGround);
@@ -225,40 +223,23 @@ public void UpdateVelocity(ref Vector3 currentVelocity, float deltaTime)
     
     // 5. 重力施加
     currentVelocity += Config.Gravity * deltaTime;
-    
-    // 6. 空中阻力
-    if (!isStableOnGround)
-    {
-        currentVelocity *= (1f / (1f + (Config.AirDrag * deltaTime)));
-    }
-    
-    // 7. 检测头顶碰撞（速度截断）
-    DetectHeadCollision(currentVelocity, deltaTime);
 }
 ```
 
 **辅助方法**:
 
 ```csharp
-private void UpdateJumpTimers(bool isGrounded, float deltaTime)
+private void UpdateJumpTimers(float deltaTime)
 {
     _jumpState.BufferTimeRemaining -= deltaTime;
-    
-    if (isGrounded)
-    {
-        _jumpState.CoyoteTimeRemaining = Config.CoyoteTime;
-        _jumpState.ConsumedCount = 0;
-    }
-    else
-    {
-        _jumpState.CoyoteTimeRemaining -= deltaTime;
-    }
 }
 
 private void UpdateCharacterState(bool isGrounded)
 {
     if (isGrounded && (_currentState == CharacterState.Airborne || _currentState == CharacterState.Jumping))
     {
+        // 从空中/跳跃状态着地，重置跳跃次数
+        _jumpState.ConsumedCount = 0;
         TransitionToState(CharacterState.Default);
     }
     else if (!isGrounded && _currentState == CharacterState.Default && !_jumpState.IsActive)
@@ -270,8 +251,7 @@ private void UpdateCharacterState(bool isGrounded)
 private void HandleJumping(ref Vector3 currentVelocity, bool isGrounded, float deltaTime)
 {
     // 检查是否可以跳跃
-    bool canJump = (isGrounded || _jumpState.CoyoteTimeRemaining > 0f) || 
-                   (_jumpState.ConsumedCount < Config.MaxJumpCount);
+    bool canJump = isGrounded && _jumpState.ConsumedCount == 0 || !isGrounded && _jumpState.ConsumedCount < Config.MaxJumpCount;
     bool bufferValid = _jumpState.BufferTimeRemaining > 0f;
     
     if (canJump && bufferValid && !_jumpState.IsActive)
@@ -280,30 +260,14 @@ private void HandleJumping(ref Vector3 currentVelocity, bool isGrounded, float d
         _jumpState.IsActive = true;
         _jumpState.ElapsedTime = 0f;
         _jumpState.BufferTimeRemaining = 0f;
-        
-        if (isGrounded || _jumpState.CoyoteTimeRemaining > 0f)
-        {
-            _jumpState.ConsumedCount = 1;
-        }
-        else
-        {
-            _jumpState.ConsumedCount++;
-        }
+        _jumpState.ConsumedCount++;
         
         TransitionToState(CharacterState.Jumping);
         Motor.ForceUnground();
         
-        // 保留部分向上速度
+        // 清除所有垂直分量（向上和向下都清除），确保每次跳跃高度一致
         Vector3 verticalVelocity = Vector3.Project(currentVelocity, Motor.CharacterUp);
-        if (Vector3.Dot(verticalVelocity, Motor.CharacterUp) > 0f)
-        {
-            // 保留向上分量
-        }
-        else
-        {
-            // 清除向下分量
-            currentVelocity -= verticalVelocity;
-        }
+        currentVelocity -= verticalVelocity;
     }
     
     // 施加跳跃力
@@ -316,7 +280,22 @@ private void HandleJumping(ref Vector3 currentVelocity, bool isGrounded, float d
         {
             AnimationCurve curve = Config.JumpSpeedCurve ?? GetDefaultJumpCurve();
             float speedMultiplier = curve.Evaluate(progress);
-            currentVelocity += Motor.CharacterUp * (Config.JumpSpeed * speedMultiplier * deltaTime);
+            float targetVerticalSpeed = Config.JumpForce * speedMultiplier;
+            
+            // 只在上升期间（曲线值 > 0）赋值垂直速度
+            if (speedMultiplier > 0f)
+            {
+                // 分离水平和垂直速度
+                Vector3 verticalVelocity = Vector3.Project(currentVelocity, Motor.CharacterUp);
+                Vector3 horizontalVelocity = currentVelocity - verticalVelocity;
+                
+                // 直接设置垂直速度（赋值，不累积）
+                verticalVelocity = Motor.CharacterUp * targetVerticalSpeed;
+                
+                // 重新组合
+                currentVelocity = horizontalVelocity + verticalVelocity;
+            }
+            // 否则不干预垂直速度，让重力自然作用（下落期间）
         }
         else
         {
@@ -588,7 +567,6 @@ void Start()
 - [ ] 角色朝向跟随移动方向
 - [ ] 单次跳跃正常（高度合理）
 - [ ] 多段跳正常（可配置次数）
-- [ ] 土狼时间生效（离地后短时间内可跳跃）
 - [ ] 跳跃缓冲生效（提前按跳跃也能起跳）
 - [ ] 空中移动正常
 - [ ] 碰到头顶提前结束跳跃

@@ -12,7 +12,7 @@ namespace GameApp.Character
     {
         public Vector2 MoveInput;         // 移动输入（-1到1）或世界空间方向
         public bool JumpDown;             // 跳跃按钮按下
-        public Quaternion CameraRotation; // 相机旋转（可选）
+        public Quaternion CameraRotation; // 相机旋转
         public bool UseCameraRotation;    // 是否使用相机旋转进行坐标转换
     }
 
@@ -39,7 +39,6 @@ namespace GameApp.Character
             public bool IsActive;                // 跳跃是否激活
             public float ElapsedTime;            // 已经过的时间
             public int ConsumedCount;            // 已消耗的跳跃次数
-            public float CoyoteTimeRemaining;    // 剩余土狼时间
             public float BufferTimeRemaining;    // 剩余跳跃缓冲时间
 
             public void Reset()
@@ -47,16 +46,19 @@ namespace GameApp.Character
                 IsActive = false;
                 ElapsedTime = 0f;
                 ConsumedCount = 0;
-                CoyoteTimeRemaining = 0f;
                 BufferTimeRemaining = 0f;
             }
         }
 
         [Header("运行时状态（只读）")]
-        [SerializeField] [Framework.Core.Attributes.ReadOnly] [Label("当前状态")] 
+        [SerializeField]
+        [Framework.Core.Attributes.ReadOnly]
+        [Label("当前状态")]
         private CharacterState _currentState = CharacterState.Default;
-        
-        [SerializeField] [Framework.Core.Attributes.ReadOnly] [Label("跳跃激活")] 
+
+        [SerializeField]
+        [Framework.Core.Attributes.ReadOnly]
+        [Label("跳跃激活")]
         private bool _jumpStateActive = false;
 
         // 公共查询接口
@@ -156,13 +158,13 @@ namespace GameApp.Character
             {
                 // Slerp 球形插值
                 Vector3 targetForward = Vector3.Slerp(Motor.CharacterForward, _desiredForward,
-                    1f - Mathf.Exp(-Config.OrientationSharpness * deltaTime)).normalized;
+                    1f - Mathf.Exp(-Config.RotationSmoothness * deltaTime)).normalized;
                 currentRotation = Quaternion.LookRotation(targetForward, currentUp);
             }
 
             // 对齐世界上方向
             Vector3 smoothedGravityUp = Vector3.Slerp(currentUp, Vector3.up,
-                                                      1f - Mathf.Exp(-Config.OrientationSharpness * deltaTime));
+                                                      1f - Mathf.Exp(-Config.RotationSmoothness * deltaTime));
             currentRotation = Quaternion.FromToRotation(currentUp, smoothedGravityUp) * currentRotation;
         }
 
@@ -170,8 +172,8 @@ namespace GameApp.Character
         {
             bool isStableOnGround = Motor.GroundingStatus.IsStableOnGround;
 
-            // 1. 更新土狼时间和跳跃缓冲
-            UpdateJumpTimers(isStableOnGround, deltaTime);
+            // 1. 更新跳跃缓冲
+            _jumpState.BufferTimeRemaining -= deltaTime;
 
             // 2. 状态维护（着地/离地转换）
             UpdateCharacterState(isStableOnGround);
@@ -237,20 +239,7 @@ namespace GameApp.Character
         #endregion
 
         #region Internal Logic
-        private void UpdateJumpTimers(bool isGrounded, float deltaTime)
-        {
-            _jumpState.BufferTimeRemaining -= deltaTime;
 
-            if (isGrounded)
-            {
-                _jumpState.CoyoteTimeRemaining = Config.CoyoteTime;
-                // 跳跃次数的重置移到 UpdateCharacterState 中，只在真正着地时重置
-            }
-            else
-            {
-                _jumpState.CoyoteTimeRemaining -= deltaTime;
-            }
-        }
 
         private void UpdateCharacterState(bool isGrounded)
         {
@@ -269,33 +258,23 @@ namespace GameApp.Character
         private void HandleJumping(ref Vector3 currentVelocity, bool isGrounded, float deltaTime)
         {
             // 检查是否可以跳跃
-            bool canJump = (isGrounded || _jumpState.CoyoteTimeRemaining > 0f) ||
-                           (_jumpState.ConsumedCount < Config.MaxJumpCount);
+            bool canJump = _jumpState.ConsumedCount < Config.MaxJumpCount;
+
             bool bufferValid = _jumpState.BufferTimeRemaining > 0f;
 
-            // 移除 !_jumpState.IsActive 条件，允许打断正在进行的跳跃
             if (canJump && bufferValid)
             {
                 // 开始新跳跃
-                _jumpState.IsActive = true;
-                _jumpState.ElapsedTime = 0f;
-                _jumpState.BufferTimeRemaining = 0f;
+                _jumpState.IsActive = true; // 跳跃激活 
+                _jumpState.ElapsedTime = 0f; // 已经过的时间
+                _jumpState.BufferTimeRemaining = 0f; // 剩余跳跃缓冲时间
+                _jumpState.ConsumedCount++; // 已消耗的跳跃次数
 
-                if (isGrounded || _jumpState.CoyoteTimeRemaining > 0f)
-                {
-                    _jumpState.ConsumedCount = 1;
-                }
-                else
-                {
-                    _jumpState.ConsumedCount++;
-                }
+                TransitionToState(CharacterState.Jumping); // 状态过渡到跳跃状态
+                Motor.ForceUnground(); // 强制离开地面
 
-                TransitionToState(CharacterState.Jumping);
-                Motor.ForceUnground();
-
-                // 清除所有垂直分量（向上和向下都清除），确保每次跳跃高度一致
                 Vector3 verticalVelocity = Vector3.Project(currentVelocity, Motor.CharacterUp);
-                currentVelocity -= verticalVelocity;
+                currentVelocity -= verticalVelocity; // 清除垂直速度
             }
 
             // 施加跳跃力（上升期间直接设置垂直速度，下落期间让重力自然作用）
@@ -349,13 +328,12 @@ namespace GameApp.Character
                 if (_moveInputVector.sqrMagnitude > 0f)
                 {
                     // 有输入：线性加速/减速
-                    Vector3 inputRight = Vector3.Cross(_moveInputVector, Motor.CharacterUp);
-                    Vector3 reorientedInput = Vector3.Cross(effectiveGroundNormal, inputRight).normalized * _moveInputVector.magnitude;
+                    Vector3 reorientedInput = Motor.GetDirectionTangentToSurface(_moveInputVector, effectiveGroundNormal) * _moveInputVector.magnitude;
                     Vector3 targetVelocity = reorientedInput * Config.MaxStableMoveSpeed;
 
                     Vector3 velocityDiff = targetVelocity - currentVelocity;
-                    float maxSpeedChange = Config.StableMovementSharpness * deltaTime;
-                    
+                    float maxSpeedChange = Config.StableMovementSmoothness * deltaTime;
+
                     if (velocityDiff.magnitude <= maxSpeedChange)
                     {
                         currentVelocity = targetVelocity;
@@ -447,7 +425,7 @@ namespace GameApp.Character
         {
             // 创建 ease-out 跳跃曲线：前期保持高速，后期快速衰减
             AnimationCurve curve = new AnimationCurve();
-            
+
             // 添加关键帧，实现 ease-out 效果
             curve.AddKey(new Keyframe(0f, 1.0f, 0f, 0f));      // 起点：速度最大，切线水平
             curve.AddKey(new Keyframe(0.7f, 0.85f));           // 前70%缓慢下降
