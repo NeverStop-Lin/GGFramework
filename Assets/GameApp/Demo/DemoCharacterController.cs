@@ -315,7 +315,7 @@ namespace GameApp.Demo
             Vector3 targetVelocity = _moveInputVector * MaxAirMoveSpeed;
 
             // 防止在非稳定坡面上攀爬
-            if (Motor.GroundingStatus.FoundAnyGround && !Motor.GroundingStatus.IsStableOnGround)
+            if (!Motor.GroundingStatus.IsStableOnGround)
             {
                 Vector3 obstructionNormal = CalculateObstructionNormal();
                 // 只限制朝向障碍物的移动，允许远离障碍物
