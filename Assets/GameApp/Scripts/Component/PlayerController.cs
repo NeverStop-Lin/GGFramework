@@ -24,6 +24,8 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        _characterInputData.JumpDown = Input.GetKeyDown(KeyCode.Space);
+        _characterInputData.DashDown = Input.GetKeyDown(KeyCode.LeftShift);
         _characterInputData.CameraRotation = brain.transform.rotation;
         _characterController.SetInputs(ref _characterInputData);
     }

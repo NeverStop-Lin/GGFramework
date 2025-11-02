@@ -40,6 +40,18 @@ namespace GameApp.Character
         public int MaxJumpCount = 2;
         [Label("跳跃缓冲时间", "提前按下跳跃的缓冲时间")]
         public float JumpBufferTime = 0.15f;
+
+        [Header("飞扑")]
+        [Label("飞扑速度系数", "飞扑速度 = 系数 × 当前输入速度")]
+        public float DashSpeedMultiplier = 1.5f;
+        [Label("飞扑最小速度", "飞扑的最小速度限制")]
+        public float DashMinSpeed = 8f;
+        [Label("飞扑最大速度", "飞扑的最大速度限制")]
+        public float DashMaxSpeed = 20f;
+        [Label("地面滑行减速平滑度", "飞扑落地后减速的平滑程度，数值越大减速越快")]
+        public float DashGroundSmoothness = 3f;
+        [Label("飞扑转向平滑度", "飞扑时的转向平滑程度，数值越大转向越快")]
+        public float DashRotationSmoothness = 5f;
     }
 }
 

@@ -75,6 +75,8 @@ namespace GameApp.Demo
             inputs.MoveAxisForward = Input.GetAxisRaw(VERTICAL_INPUT);
             inputs.MoveAxisRight = Input.GetAxisRaw(HORIZONTAL_INPUT);
             inputs.CameraRotation = GetCameraRotation();
+            inputs.JumpDown = Input.GetKeyDown(KeyCode.Space) || Input.GetButtonDown("Jump");
+            inputs.DashDown = Input.GetKeyDown(KeyCode.LeftShift);
 
             return inputs;
         }
